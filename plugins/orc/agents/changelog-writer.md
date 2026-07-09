@@ -1,6 +1,6 @@
 ---
 name: changelog-writer
-description: Reads a git diff and existing CHANGELOG.md, then writes a new changelog entry in Keep a Changelog format. Used by task-build after implementation is complete and before the final commit.
+description: Reads a git diff and existing CHANGELOG.md, then writes a new changelog entry in Keep a Changelog format. Used by /orc:build after implementation, before opening the PR.
 tools: Bash, Read
 model: haiku
 ---
