@@ -81,6 +81,8 @@ This is the step that turns on `@claude implement this`.
 
 Copy `${CLAUDE_PLUGIN_ROOT}/skills/setup/templates/github-actions-workflow.yml` to `.github/workflows/orc-build.yml` if it doesn't already exist. Replace `{marketplace_owner}/{marketplace_repo}` with the actual marketplace repo (ask if not inferable from `git remote`).
 
+The template's `steps:` has a placeholder comment marking where to add this project's dependency-install and environment-prep steps (composer/npm/pip install, `.env` setup, asset build — whatever the project needs). Find the project's own CI workflow (commonly `.github/workflows/ci.yml`) and mirror its proven setup steps there, inserted between `checkout` and the `claude-code-action` step. Skipping this leaves `build`'s Verification/Pre-commit Gate commands running against a bare checkout with no installed dependencies — they will fail immediately on every autonomous run.
+
 #### 8b. Claude GitHub App
 
 Check whether the Claude GitHub App is installed on `{owner}/{repo}`:

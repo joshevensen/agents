@@ -1,7 +1,7 @@
 {
   "name": "orc",
   "description": "Issue-to-PR automation for GitHub-issue-driven work: interactive spec authoring plus autonomous build and review, with interactive merge.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": {
     "name": "Josh Evensen"
   }
