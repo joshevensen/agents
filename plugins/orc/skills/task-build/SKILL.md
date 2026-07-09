@@ -173,7 +173,7 @@ Create the task folder if it doesn't already exist:
 mkdir -p .orc/tasks/{number}-{slug}
 ```
 
-Initialize the implementation notes file from the template at `~/.agents/skills/task-build/templates/impl-notes.md`. Write it to `.orc/tasks/{number}-{slug}/impl-notes.md`.
+Initialize the implementation notes file from the template at `${CLAUDE_PLUGIN_ROOT}/skills/task-build/templates/impl-notes.md`. Write it to `.orc/tasks/{number}-{slug}/impl-notes.md`.
 
 Update status:
 ```bash
@@ -373,7 +373,7 @@ gh issue edit {number} --repo {owner}/{repo} \
   --add-label "status:built"
 ```
 
-Read the PR body template from `.github/PULL_REQUEST_TEMPLATE.md`. Fall back to `~/.agents/skills/setup/templates/pull-request-template.md` if missing.
+Read the PR body template from `.github/PULL_REQUEST_TEMPLATE.md`. Fall back to `${CLAUDE_PLUGIN_ROOT}/skills/setup/templates/pull-request-template.md` if missing.
 
 ```bash
 gh pr create --repo {owner}/{repo} \
@@ -392,7 +392,7 @@ gh issue comment {number} --repo {owner}/{repo} --body "{pr-url}"
 
 ### 18. Post AI review comment
 
-Read `~/.agents/skills/task-build/templates/ai-review.md`. Fill in each agent's findings. Mark any finding fixed in step 13 as: `~~{finding}~~ — fixed in {commit-sha}`.
+Read `${CLAUDE_PLUGIN_ROOT}/skills/task-build/templates/ai-review.md`. Fill in each agent's findings. Mark any finding fixed in step 13 as: `~~{finding}~~ — fixed in {commit-sha}`.
 
 ```bash
 gh pr comment {pr} --repo {owner}/{repo} --body "{ai-review-body}"
@@ -403,7 +403,7 @@ gh pr comment {pr} --repo {owner}/{repo} --body "{ai-review-body}"
 ### 19. Wait for Copilot review
 
 ```bash
-~/.agents/skills/task-build/scripts/wait-for-pr-review {owner}/{repo} {pr}
+${CLAUDE_PLUGIN_ROOT}/skills/task-build/scripts/wait-for-pr-review {owner}/{repo} {pr}
 ```
 
 Exit 0: proceed with Copilot threads first. Exit 1 (timed out): proceed with human threads only.

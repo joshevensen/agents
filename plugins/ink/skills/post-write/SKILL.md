@@ -16,7 +16,7 @@ Find exactly one local branch matching `post/{nnn}-*` and derive `{slug}` from i
 
 ### 2. Load requirements
 
-Parse `meta.yaml` and require `status: outlined`. Read `notes.md`, `outline.md`, `.orc/config/editorial-guidelines.md`, `.orc/config/writing-style.md`, and `~/.agents/skills/post-content-guide.md`.
+Parse `meta.yaml` and require `status: outlined`. Read `notes.md`, `outline.md`, `.orc/config/editorial-guidelines.md`, `.orc/config/writing-style.md`, and `${CLAUDE_PLUGIN_ROOT}/skills/post-content-guide.md`.
 
 If the writing-style file is missing or contains only its setup placeholder, stop and explain that `/post-write` depends on populated writing samples. Do not substitute a generic voice.
 

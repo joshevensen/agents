@@ -34,7 +34,7 @@ Let the user confirm the type. Ideas have no type until this confirmation.
 
 ### 3. Confirm title and slug
 
-Read `~/.agents/skills/post-content-guide.md`. Produce a book-title-capitalized title under 60 characters when practical and never over 73.
+Read `${CLAUDE_PLUGIN_ROOT}/skills/post-content-guide.md`. Produce a book-title-capitalized title under 60 characters when practical and never over 73.
 
 Derive the slug exactly as the guide specifies. Show the title, type, and slug and obtain confirmation before making changes.
 

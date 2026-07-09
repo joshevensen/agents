@@ -12,7 +12,7 @@ if [[ -z "$EXISTS" ]]; then
   gh issue create --repo "$REPO" \
     --title "Global Queue" \
     --label "queue" \
-    --body-file ~/.agents/skills/setup/templates/queue.md
+    --body-file ${CLAUDE_PLUGIN_ROOT}/skills/setup/templates/queue.md
   echo "Global Queue created" >&2
 else
   echo "Global Queue already present (#$EXISTS)" >&2

@@ -31,7 +31,7 @@ Do not develop files in the main checkout.
 
 In the worktree, parse `meta.yaml`. Accept only `idea` or `outlined`; re-development of an outlined post is allowed. A draft must be deliberately moved back to outlined before this workflow.
 
-Read `notes.md`, any existing `outline.md`, `.orc/config/editorial-guidelines.md`, and `~/.agents/skills/post-content-guide.md`.
+Read `notes.md`, any existing `outline.md`, `.orc/config/editorial-guidelines.md`, and `${CLAUDE_PLUGIN_ROOT}/skills/post-content-guide.md`.
 
 ### 4. Research collaboratively
 

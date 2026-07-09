@@ -14,7 +14,7 @@ If no number is supplied, fetch the post-list issue and show only `draft` posts 
 
 Find exactly one local branch matching `post/{nnn}-*` and derive `{slug}` from it. Require the worktree at `../$(basename "$(pwd)")-post-{nnn}-{slug}` on branch `post/{nnn}-{slug}`, confirming it with `git worktree list --porcelain`. Work only there.
 
-Parse `meta.yaml` and require `status: draft`. Read `post.md`, `outline.md`, `notes.md`, `.orc/config/editorial-guidelines.md`, `.orc/config/writing-style.md`, and `~/.agents/skills/post-content-guide.md`.
+Parse `meta.yaml` and require `status: draft`. Read `post.md`, `outline.md`, `notes.md`, `.orc/config/editorial-guidelines.md`, `.orc/config/writing-style.md`, and `${CLAUDE_PLUGIN_ROOT}/skills/post-content-guide.md`.
 
 ### 2. Factual completeness pass
 

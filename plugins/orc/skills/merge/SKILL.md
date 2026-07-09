@@ -126,7 +126,7 @@ If any checks fail, stop and report the failing check names. Do not attempt to a
 ### 9. Wait for Copilot review
 
 ```bash
-~/.agents/skills/quick-merge/scripts/wait-for-pr-review {owner}/{repo} {pr}
+${CLAUDE_PLUGIN_ROOT}/skills/quick-merge/scripts/wait-for-pr-review {owner}/{repo} {pr}
 ```
 
 Exit 0 (review state on stdout): proceed to fetch threads.

@@ -117,7 +117,7 @@ cd {worktree-path}/platform && herd unlink task-{number}.fibermade
 
 Then merge, delete the branch, sync the queue file, and remove the worktree:
 ```bash
-~/.agents/skills/task-merge/scripts/cleanup {owner}/{repo} {pr} {branch} {number} {slug}
+${CLAUDE_PLUGIN_ROOT}/skills/task-merge/scripts/cleanup {owner}/{repo} {pr} {branch} {number} {slug}
 ```
 
 GitHub closes the issue via `Closes #{number}` in the PR body.

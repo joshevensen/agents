@@ -46,7 +46,7 @@ Derive a short action-oriented title (73 characters max) and write a one-to-thre
 mkdir -p .orc/tasks
 ```
 
-Write to `.orc/tasks/{slug}.md` (slug = lowercase title, spaces replaced with `-`, non-alphanumeric stripped) using `~/.agents/skills/task-create/templates/task-draft.md` as the structure, filling in `{title}`, `{type}`, and `{description}`.
+Write to `.orc/tasks/{slug}.md` (slug = lowercase title, spaces replaced with `-`, non-alphanumeric stripped) using `${CLAUDE_PLUGIN_ROOT}/skills/task-create/templates/task-draft.md` as the structure, filling in `{title}`, `{type}`, and `{description}`.
 
 Report:
 ```

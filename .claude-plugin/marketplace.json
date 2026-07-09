@@ -1,0 +1,18 @@
+{
+  "name": "hexbyte",
+  "owner": {
+    "name": "Josh Evensen"
+  },
+  "plugins": [
+    {
+      "name": "orc",
+      "source": "./plugins/orc",
+      "description": "Issue-to-PR automation: interactive spec authoring plus autonomous build, review, and merge skills for a GitHub-issue-driven workflow."
+    },
+    {
+      "name": "ink",
+      "source": "./plugins/ink",
+      "description": "Editorial workflow for long-form blog posts: brainstorm, develop, write, review, and publish."
+    }
+  ]
+}
