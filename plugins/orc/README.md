@@ -64,3 +64,7 @@ The seven gates:
 - Comment `@claude implement this` on a `status:ready` issue (via the Action), **or**
 - `/orc:build 123` — a specific task/bug issue, **or**
 - `/orc:build F001` — the next unbuilt task in feature F001.
+
+## Versioning
+
+`plugin.json`'s `version` is semver and is the cache key Claude Code uses to decide whether an installed copy needs updating — pushing commits alone does not update anyone already installed. **Bump it in the same PR as any change you want to ship**, and record it in `CHANGELOG.md`. See [Version management](https://code.claude.com/docs/en/plugins-reference#version-management).
