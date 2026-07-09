@@ -8,28 +8,31 @@ REPO="$1"
 
 # source|target  (empty target = drop silently)
 MAPPINGS=(
-  "bug|task"                   "bug-fix|task"              "bugfix|task"
-  "enhancement|task"           "feature|feature"           "feature-request|task"
-  "documentation|"             "docs|"
-  "refactor|"                  "refactoring|"
-  "chore|"                     "maintenance|"              "housekeeping|"
-  "type:feature|feature"       "type:bug|task"             "type:chore|"
-  "type:docs|"                 "type:refactor|"            "type:queue|queue"
-  "type:group|"                "type:article|post"         "article|post"
-  "planned|status:ready"       "backlog|status:ready"
-  "in-progress|status:progress" "wip|status:progress"
-  "shipped|status:built"
+  "bug|type:bug"                "bug-fix|type:bug"          "bugfix|type:bug"
+  "enhancement|type:task"       "feature|type:task"         "feature-request|type:task"
+  "task|type:task"
+  "documentation|"              "docs|"
+  "refactor|"                   "refactoring|"
+  "chore|"                      "maintenance|"              "housekeeping|"
+  "type:feature|type:task"      "type:chore|"
+  "type:docs|"                  "type:refactor|"            "type:queue|"
+  "type:group|"                 "type:article|"             "article|"
+  "planned|status:ready"        "backlog|status:ready"
+  "in-progress|status:building" "wip|status:building"
+  "shipped|status:built"        "defective|status:blocked"  "status:defective|status:blocked"
+  "status:progress|status:building"
   "urgent|"       "critical|"       "high-priority|"  "medium-priority|"
   "low-priority|" "minor|"          "trivial|"
   "p0|" "p1|" "p2|" "p3|"
   "small|" "large|" "x-large|" "xl|" "xs|"
   "good first issue|" "wontfix|" "won't fix|"
   "duplicate|" "invalid|" "help wanted|" "question|" "needs-triage|"
+  "queue|" "posts|" "post|"
 )
 
 MANAGED_NAMES=(
-  status:draft status:ready status:progress status:built status:defective
-  feature task queue posts post dependencies php javascript
+  status:draft status:ready status:building status:blocked status:built
+  type:task type:bug dependencies php javascript
 )
 
 is_managed() {

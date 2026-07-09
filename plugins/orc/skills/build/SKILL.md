@@ -115,13 +115,29 @@ Update file-level docblocks for changed files. Invoke `changelog-writer` and ins
 gh issue edit {number} --remove-label "status:building" --add-label "status:built"
 ```
 
-Open the PR against `main` using the repo's PR template. Include the implementation notes and the AI-review summary from step 11 in the body, and `Closes #{number}`. Post the PR URL as an issue comment. **Do not merge.**
+Open the PR against `main` using the repo's PR template. Include the implementation notes and the AI-review summary from step 11 in the body, and `Closes #{number}`. Post the PR URL as an issue comment.
 
-### 14. Report
+### 14. Merge readiness
+
+"Open" isn't useful if it's red or unmergeable — check both before reporting done. Neither step merges.
+
+**CI:**
+```bash
+gh pr checks {pr} --watch
+```
+If a check fails, fetch its log (`gh run view {run-id} --log-failed`) and the diff, invoke `ci-debugger`, and apply the fix only if it's clearly safe (missing import, type error, lint, fixture update). Commit (`fix(#{number}): fix CI — {reason}`), push, re-watch. If the fix isn't safe or checks still fail after one attempt, **gate: gate/verify** with the failing check and diagnosis.
+
+**Mergeability:**
+```bash
+gh pr view {pr} --json mergeable --jq .mergeable
+```
+If `CONFLICTING`: `git fetch origin && git rebase origin/main` to surface markers, invoke `conflict-classifier`. Auto-resolve files it marks simple, stage, `git rebase --continue`, then `git push --force-with-lease`. If any file is marked complex, **gate: gate/verify** with the conflicting sections.
+
+### 15. Report
 
 ```
 PR open for #{number} — {pr-url}
-Reviewed, {n} warning(s) noted. Ready for your merge.
+CI green, mergeable, {n} warning(s) noted. Ready for your merge.
 ```
 
 If building a feature (`F###`), remind: run `/orc:build {id}` again after merging to pick up the next task.

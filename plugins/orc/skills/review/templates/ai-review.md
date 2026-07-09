@@ -1,6 +1,6 @@
 ## AI Review
 
-_Parallel agents reviewed correctness, security, quality, and impact against the spec and diff._
+_Parallel agents reviewed correctness, security, quality, impact, and deploy risk against the spec and diff._
 _Severity: 🚫 BLOCKER — ⚠️ WARNING — 📝 NOTE_
 
 ---
@@ -30,3 +30,10 @@ _Severity: 🚫 BLOCKER — ⚠️ WARNING — 📝 NOTE_
 **Status: {PASS | WARNING | BLOCK}**
 
 {findings — or "✓ No breaking changes or unexpected side effects detected."}
+
+---
+
+### Deploy Risk
+**Risk level: {none | low | HIGH}**
+
+{findings — or "✓ No deployment coordination risk detected."}

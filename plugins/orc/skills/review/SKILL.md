@@ -28,22 +28,23 @@ If the diff is empty, report "Nothing to review" and stop.
 
 ### 2. Run the review agents in parallel
 
-Invoke all four in parallel, passing each the **spec (if any), impl notes (if any), and the full diff** — never the build conversation, so each reviews the code with fresh eyes:
+Invoke all five in parallel, passing each the **spec (if any), impl notes (if any), and the full diff** — never the build conversation, so each reviews the code with fresh eyes:
 
 - `review-correctness` — acceptance criteria, scope drift, logic errors
 - `review-security` — injection, auth gaps, data exposure, insecure defaults
 - `review-quality` — complexity, pattern consistency, test coverage
-- `review-impact` — breaking changes, side effects, performance, **destructive/irreversible migrations**
+- `review-impact` — breaking changes, side effects, performance regressions
+- `deploy-risk-scanner` — migrations, env var additions, job schema changes, webhook/API contract changes
 
-Each returns findings tagged `BLOCKER`, `WARNING`, or `NOTE`.
+Each of the four review agents returns findings tagged `BLOCKER`, `WARNING`, or `NOTE`. `deploy-risk-scanner` returns a risk level (`none`/`low`/`HIGH`) plus findings — treat `HIGH` as equivalent to a `BLOCKER`, `low` as a `NOTE`.
 
 ### 3. Add an independent pass
 
-Run `/code-review` over the same diff as a fifth, independent perspective. If it isn't available in this environment, note that and continue with the four agents.
+Run `/code-review` over the same diff as a sixth, independent perspective. If it isn't available in this environment, note that and continue with the five agents.
 
 ### 4. Classify
 
-Collect every finding into three buckets: **BLOCKERS**, **WARNINGS**, **NOTES**. A finding counts as a BLOCKER if any agent marks it so.
+Collect every finding into three buckets: **BLOCKERS**, **WARNINGS**, **NOTES**. A finding counts as a BLOCKER if any agent marks it so, or if `deploy-risk-scanner` reports `HIGH`.
 
 ### 5. Auto-fix the safe ones
 

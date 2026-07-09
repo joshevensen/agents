@@ -1,0 +1,34 @@
+name: orc autonomous build
+
+on:
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: orc-build-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: contains(github.event.comment.body, '@claude') && github.event.issue.pull_request == null
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: anthropics/claude-code-action@v1
+        env:
+          ORC_AUTONOMOUS: "1"
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          plugin_marketplaces: "https://github.com/{marketplace_owner}/{marketplace_repo}.git"
+          plugins: "orc"
+          claude_args: --permission-mode acceptEdits
+          prompt: |
+            /orc:build ${{ github.event.issue.number }}
+
+            Additional instructions from the triggering comment:
+            ${{ github.event.comment.body }}

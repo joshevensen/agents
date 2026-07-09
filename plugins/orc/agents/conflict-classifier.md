@@ -1,6 +1,6 @@
 ---
 name: conflict-classifier
-description: Inspects merge conflict markers in the working tree and classifies each conflicted file as simple (auto-resolvable) or complex (needs human judgment). Used by task-merge and feature-merge after a rebase or merge attempt produces conflicts.
+description: Inspects merge conflict markers in the working tree and classifies each conflicted file as simple (auto-resolvable) or complex (needs human judgment). Invoked by build and push after a rebase surfaces conflicts during their merge-readiness check.
 tools: Bash, Read
 model: haiku
 ---
