@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Usage: cleanup <owner/repo> <pr> <branch> <number> <slug>
+set -euo pipefail
+
+REPO="$1"
+PR="$2"
+BRANCH="$3"
+NUMBER="$4"
+SLUG="$5"
+
+MAIN=$(git worktree list | awk 'NR==1 {print $1}')
+WORKTREE=$(git worktree list | awk -v b="[$BRANCH]" '$3 == b {print $1}')
+
+gh pr merge "$PR" --repo "$REPO" --squash
+git -C "$MAIN" branch -D "$BRANCH"
+git -C "$MAIN" pull origin main
+rm -rf "$MAIN/.orc/tasks/${NUMBER}-${SLUG}/"
+
+# Remove worktree last — script may be running inside it
+if [ -n "$WORKTREE" ]; then
+  git -C "$MAIN" worktree remove --force "$WORKTREE"
+fi

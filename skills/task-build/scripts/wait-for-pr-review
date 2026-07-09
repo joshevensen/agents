@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Usage: wait-for-pr-review <owner/repo> <pr> [--interval N] [--timeout N]
+# Polls for a Copilot PR review. Exits 0 and prints state if found, exits 1 if timed out.
+set -euo pipefail
+
+REPO="$1"
+PR="$2"
+INTERVAL=25
+TIMEOUT=300
+
+shift 2
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --interval) INTERVAL="$2"; shift 2 ;;
+    --timeout)  TIMEOUT="$2";  shift 2 ;;
+    *) echo "Unknown option: $1" >&2; exit 1 ;;
+  esac
+done
+
+check() {
+  gh api "repos/$REPO/pulls/$PR/reviews" \
+    --jq '.[] | select(.user.login == "copilot-pull-request-reviewer[bot]") | .state' \
+    2>/dev/null || true
+}
+
+STATE=$(check)
+if [[ -n "$STATE" ]]; then
+  echo "$STATE"
+  exit 0
+fi
+
+ITERATIONS=$(( TIMEOUT / INTERVAL ))
+for _ in $(seq 1 "$ITERATIONS"); do
+  sleep "$INTERVAL"
+  STATE=$(check)
+  if [[ -n "$STATE" ]]; then
+    echo "$STATE"
+    exit 0
+  fi
+done
+
+exit 1
