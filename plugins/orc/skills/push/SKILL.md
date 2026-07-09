@@ -39,7 +39,20 @@ git push -u origin HEAD
 
 ### 6. Review
 
-Invoke `/orc:review` with base `main`. Work through any residual BLOCKERs and WARNINGs interactively (`review` already offers `(f)/(r)` per finding when run standalone) before continuing.
+Invoke `/orc:review` with base `main`. It auto-fixes safe findings itself and commits them (`fix: address review findings`). For residual BLOCKERs and WARNINGs, work through them interactively (`review` offers `(f)/(r)` per finding when run standalone):
+
+**`(f)` — Fix:** show the exact edit, confirm, apply, then commit:
+```bash
+git commit -am "fix: {brief description of the finding}"
+```
+
+**`(r)` — Reply/defer:** note it for the PR body, no commit.
+
+Once every finding is resolved or deferred, push whatever `review` and this step committed:
+```bash
+git push
+```
+Do not open the PR before this push — otherwise fixes stay local-only and the PR won't reflect them.
 
 ### 7. Open PR
 
