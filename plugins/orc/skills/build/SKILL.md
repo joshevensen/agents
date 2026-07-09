@@ -54,7 +54,13 @@ Expect `status:ready`. If `status:blocked` or `status:building` from a prior run
 
 ### 3. Gate: spec
 
-The spec comment must exist and its acceptance criteria must be **machine-verifiable** — each tied to a test, command, or observable behavior. If there is no spec, or criteria are vague ("looks right", "works well"), **gate: spec** with the specific criteria that can't be checked. Point the user to `/orc:create {number}` to (re-)spec.
+Validate the spec comment against `${CLAUDE_PLUGIN_ROOT}/templates/spec.md`. Three conditions must hold:
+
+1. A `## Spec` comment exists.
+2. Every **Acceptance Criterion** is machine-verifiable — tied to a test, command, or observable outcome (not "looks right").
+3. **Open Questions** reads `None.`
+
+If any fail, **gate: spec** naming the specific criteria that can't be checked or the questions still open. Point the user to `/orc:create {number}` to (re-)spec.
 
 ### 4. Gate: confidence
 
