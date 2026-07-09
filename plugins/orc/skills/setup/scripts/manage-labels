@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# Usage: manage-labels <owner/repo> [--prune]
+# Default: upsert all managed labels (create if missing, update if present).
+# --prune: also delete any labels not in the managed set,
+#   excluding dynamic labels (blocked:*) and Dependabot-managed labels.
+set -euo pipefail
+
+REPO="$1"
+MODE="upsert"
+[[ "${2-}" == "--prune" ]] && MODE="prune"
+
+# name|color|description
+MANAGED_LABELS=(
+  "status:draft|c5def5|Issue created, spec not yet written"
+  "status:ready|1d76db|Spec written, ready to build"
+  "status:building|c2e0c6|Build in progress"
+  "status:blocked|b60205|Build stopped at a gate, needs input"
+  "status:built|0e8a16|PR open, awaiting manual merge"
+  "type:task|5319e7|A single, bounded change"
+  "type:bug|d93f0b|A defect with reproduction steps"
+  "dependencies|d93f0b|Pull requests that update a dependency file"
+  "php|f9d0c4|PHP Dependabot change"
+  "javascript|f9d0c4|Javascript Dependabot change"
+)
+
+# Repositories can extend the managed set without changing this shared skill.
+if [[ -f ".orc/config/labels" ]]; then
+  while IFS= read -r entry; do
+    [[ -z "$entry" || "$entry" =~ ^[[:space:]]*# ]] && continue
+    MANAGED_LABELS+=("$entry")
+  done < ".orc/config/labels"
+fi
+
+EXISTING=$(gh label list --repo "$REPO" --limit 1000 --json name --jq '.[].name')
+
+if [[ "$MODE" == "upsert" ]]; then
+  for entry in "${MANAGED_LABELS[@]}"; do
+    IFS='|' read -r name color desc <<< "$entry"
+    if echo "$EXISTING" | grep -Fxq "$name"; then
+      gh label edit "$name" --repo "$REPO" --color "$color" --description "$desc"
+    else
+      gh label create "$name" --repo "$REPO" --color "$color" --description "$desc"
+    fi
+  done
+  echo "Managed labels upserted for $REPO" >&2
+
+elif [[ "$MODE" == "prune" ]]; then
+  MANAGED_NAMES=()
+  for entry in "${MANAGED_LABELS[@]}"; do
+    IFS='|' read -r name _ _ <<< "$entry"
+    MANAGED_NAMES+=("$name")
+  done
+
+  # Labels that must never be pruned even if not in the managed set.
+  # blocked:* are created on demand by skills.
+  # github-actions is created and managed by Dependabot.
+  is_protected() {
+    local label="$1"
+    [[ "$label" =~ ^blocked: ]]      && return 0
+    [[ "$label" == "github-actions" ]] && return 0
+    return 1
+  }
+
+  while IFS= read -r label; do
+    is_protected "$label" && continue
+    found=0
+    for m in "${MANAGED_NAMES[@]}"; do
+      [[ "$m" == "$label" ]] && found=1 && break
+    done
+    if [[ "$found" -eq 0 ]]; then
+      gh label delete "$label" --repo "$REPO" --yes
+      echo "Deleted: $label" >&2
+    fi
+  done <<< "$EXISTING"
+fi

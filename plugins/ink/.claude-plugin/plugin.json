@@ -1,0 +1,8 @@
+{
+  "name": "ink",
+  "description": "Editorial workflow for long-form blog posts: brainstorm, develop, write, review, and publish.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Josh Evensen"
+  }
+}

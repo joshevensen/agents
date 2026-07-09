@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# Usage: migrate-labels <owner/repo>
+# Maps known pre-skill labels to managed equivalents and drops known-useless labels.
+# Prints any unrecognized labels to stderr for manual review.
+set -euo pipefail
+
+REPO="$1"
+
+# source|target  (empty target = drop silently)
+MAPPINGS=(
+  "bug|type:bug"                "bug-fix|type:bug"          "bugfix|type:bug"
+  "enhancement|type:task"       "feature|type:task"         "feature-request|type:task"
+  "task|type:task"
+  "documentation|"              "docs|"
+  "refactor|"                   "refactoring|"
+  "chore|"                      "maintenance|"              "housekeeping|"
+  "type:feature|type:task"      "type:chore|"
+  "type:docs|"                  "type:refactor|"            "type:queue|"
+  "type:group|"                 "type:article|"             "article|"
+  "planned|status:ready"        "backlog|status:ready"
+  "in-progress|status:building" "wip|status:building"
+  "shipped|status:built"        "defective|status:blocked"  "status:defective|status:blocked"
+  "status:progress|status:building"
+  "urgent|"       "critical|"       "high-priority|"  "medium-priority|"
+  "low-priority|" "minor|"          "trivial|"
+  "p0|" "p1|" "p2|" "p3|"
+  "small|" "large|" "x-large|" "xl|" "xs|"
+  "good first issue|" "wontfix|" "won't fix|"
+  "duplicate|" "invalid|" "help wanted|" "question|" "needs-triage|"
+  "queue|" "posts|" "post|"
+)
+
+MANAGED_NAMES=(
+  status:draft status:ready status:building status:blocked status:built
+  type:task type:bug dependencies php javascript
+)
+
+is_managed() {
+  local label="$1"
+  [[ "$label" =~ ^blocked: ]] && return 0
+  [[ "$label" == "dependencies" ]] && return 0
+  [[ "$label" == "github-actions" ]] && return 0
+  for m in "${MANAGED_NAMES[@]}"; do
+    [[ "$m" == "$label" ]] && return 0
+  done
+  return 1
+}
+
+lookup() {
+  local needle
+  needle=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+  for entry in "${MAPPINGS[@]}"; do
+    local src tgt
+    IFS='|' read -r src tgt <<< "$entry"
+    if [[ "$src" == "$needle" ]]; then
+      echo "$tgt"
+      return 0
+    fi
+  done
+  return 1
+}
+
+ISSUES_JSON=$(gh issue list --repo "$REPO" --state open --limit 500 \
+  --json number,labels)
+
+UPDATED=0
+UNKNOWN_LABELS=()
+
+while IFS=$'\t' read -r NUM LABEL_CSV; do
+  [[ -z "$NUM" ]] && continue
+
+  IFS=',' read -ra CURRENT_LABELS <<< "$LABEL_CSV"
+  ADD_ARGS=()
+  REMOVE_ARGS=()
+
+  for label in "${CURRENT_LABELS[@]}"; do
+    [[ -z "$label" ]] && continue
+    is_managed "$label" && continue
+
+    target=""
+    if target=$(lookup "$label"); then
+      REMOVE_ARGS+=(--remove-label "$label")
+      if [[ -n "$target" ]]; then
+        already=0
+        for l in "${CURRENT_LABELS[@]}"; do [[ "$l" == "$target" ]] && already=1 && break; done
+        [[ "$already" -eq 0 ]] && ADD_ARGS+=(--add-label "$target")
+      fi
+    else
+      UNKNOWN_LABELS+=("$label (issue #$NUM)")
+    fi
+  done
+
+  if [[ ${#ADD_ARGS[@]} -gt 0 || ${#REMOVE_ARGS[@]} -gt 0 ]]; then
+    gh issue edit "$NUM" --repo "$REPO" "${ADD_ARGS[@]}" "${REMOVE_ARGS[@]}"
+    UPDATED=$((UPDATED + 1))
+  fi
+done < <(echo "$ISSUES_JSON" | jq -r '.[] | [(.number | tostring), (.labels | map(.name) | join(","))] | join("\t")')
+
+echo "Label migration: $UPDATED issues updated" >&2
+
+if [[ ${#UNKNOWN_LABELS[@]} -gt 0 ]]; then
+  echo "" >&2
+  echo "Unrecognized labels (handle manually):" >&2
+  printf '  %s\n' "${UNKNOWN_LABELS[@]}" >&2
+fi
