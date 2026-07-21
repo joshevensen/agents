@@ -2,12 +2,30 @@
 
 Issue-to-PR automation for a GitHub-issue-driven workflow. You author specs interactively; `build` implements them autonomously — through code, review, and an open PR — stopping at well-defined **gates** whenever it can't safely continue. You do the final merge.
 
-Part of the `hexbyte` marketplace. Install:
+Part of the `hexbyte` marketplace.
+
+### Install — Claude Code CLI (local)
 
 ```
 /plugin marketplace add joshevensen/hexbyte-plugins
 /plugin install orc@hexbyte
 ```
+
+### Install — Claude Code on the web (cloud sessions)
+
+The interactive `/plugin` command isn't available in web sessions, and plugins must be installed **into the cloud environment** so they load before Claude Code launches. Add the plugin to your environment's **Setup script**:
+
+1. In [claude.ai/code](https://claude.ai/code), open the environment (⋯ → **Update cloud environment**, or the environment picker).
+2. In the **Setup script** field, add:
+
+   ```bash
+   claude plugin marketplace add joshevensen/hexbyte-plugins
+   claude plugin install orc@hexbyte
+   ```
+
+3. **Save changes.** The script runs on each new session, so orc is installed and its `/orc:*` skills are available. Existing sessions aren't affected — start a new one.
+
+Requires the environment's network access to reach `github.com` (the default **Trusted** policy does).
 
 ## Skills
 
