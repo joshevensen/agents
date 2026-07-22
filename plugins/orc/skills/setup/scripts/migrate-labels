@@ -9,12 +9,12 @@ REPO="$1"
 # source|target  (empty target = drop silently)
 MAPPINGS=(
   "bug|type:bug"                "bug-fix|type:bug"          "bugfix|type:bug"
-  "enhancement|type:task"       "feature|type:task"         "feature-request|type:task"
-  "task|type:task"
+  "enhancement|"                "feature|"                  "feature-request|"
+  "task|"                       "type:task|"                "type:feature|"
   "documentation|"              "docs|"
   "refactor|"                   "refactoring|"
   "chore|"                      "maintenance|"              "housekeeping|"
-  "type:feature|type:task"      "type:chore|"
+  "type:chore|"
   "type:docs|"                  "type:refactor|"            "type:queue|"
   "type:group|"                 "type:article|"             "article|"
   "planned|status:ready"        "backlog|status:ready"
@@ -32,7 +32,7 @@ MAPPINGS=(
 
 MANAGED_NAMES=(
   status:draft status:ready status:building status:blocked status:built
-  type:task type:bug dependencies php javascript
+  type:bug dependencies php javascript
 )
 
 is_managed() {

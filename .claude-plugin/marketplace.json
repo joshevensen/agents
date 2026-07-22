@@ -7,7 +7,7 @@
     {
       "name": "orc",
       "source": "./plugins/orc",
-      "description": "Issue-to-PR automation: interactive spec authoring plus autonomous build, review, and merge skills for a GitHub-issue-driven workflow."
+      "description": "Issue-to-PR automation: discuss and spec issues interactively, then build them autonomously with parallel subagents, focused verification, and a folded-in AI review, for a GitHub-issue-driven workflow."
     },
     {
       "name": "ink",

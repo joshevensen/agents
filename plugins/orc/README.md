@@ -1,6 +1,9 @@
 # orc
 
-Issue-to-PR automation for a GitHub-issue-driven workflow. You author specs interactively; `build` implements them autonomously — through code, review, and an open PR — stopping at well-defined **gates** whenever it can't safely continue. You do the final merge.
+Issue-to-PR automation for a GitHub-issue-driven workflow, built for Claude Code
+on the web. You discuss and spec an issue interactively; `build` implements it
+autonomously — through code, review, and an open PR — stopping at well-defined
+**gates** whenever it can't safely continue. You do the final merge.
 
 Part of the `hexbyte` marketplace.
 
@@ -29,60 +32,77 @@ Requires the environment's network access to reach `github.com` (the default **T
 
 ## Skills
 
-| Skill | Mode | What it does |
-|---|---|---|
-| `/orc:create` | local | Discuss an idea, **confirm its type**, then create a task/bug **issue** or a feature **doc** |
-| `/orc:plan` | autonomous-capable | Turn a feature doc into ordered task issues (feature-flag setup is always task #1) |
-| `/orc:build` | **autonomous** | Take an issue (or feature id) from spec to open PR: implement → verify → review. Never merges |
-| `/orc:review` | local | Run the AI review over the current diff and process findings. Called by `build` and `push` |
-| `/orc:push` | local | Commit working-tree changes → review → push → open PR (no merge) |
-| `/orc:drafts` | local | List `status:draft` issues (waiting for a spec) |
-| `/orc:ready` | local | List `status:ready` issues (buildable / ready to `@claude`) |
-| `/orc:bump` | local | Review and merge Dependabot grouped PRs when safe |
-| `/orc:discuss` | local | Read-only exploration mode — no changes until you say go |
-| `/orc:setup` | local | Wire a repo for autonomous mode (Actions workflow, OAuth secret, `AGENTS.md`, PR template) |
+| Skill | What it does |
+|---|---|
+| `/orc:create` | Discuss an idea at the scope level and produce GitHub issue(s) — no spec |
+| `/orc:plan` | Research the codebase and write a build-ready spec onto an issue |
+| `/orc:build` | Take a specced issue to an open PR: task list → parallel build → focused verify → review → PR. Never merges |
+| `/orc:push` | Commit working-tree changes → review → push → open PR (no merge) |
+| `/orc:list` | List open issues, optionally filtered by status |
+| `/orc:bump` | Review and merge Dependabot grouped PRs when safe |
+| `/orc:discuss` | Read-only exploration mode — no changes until you say go |
+| `/orc:setup` | Scaffold a repo for orc — labels, `.orc/`, `CLAUDE.md` sections, PR template, CHANGELOG, dependabot |
 
 ## The pipeline
 
 ```
-             you, locally                          autonomous                 you
-  ┌────────────────────────────────┐        ┌──────────────────────┐      ┌───────┐
-  create ──▶ issue (status:ready) ──┼──────▶ build ──▶ PR (status:built) ──▶ merge
-     │                                        ▲
-     └── feature ──▶ .orc/features/F001.md    │
-                        │                     │
-                        └── plan ──▶ ordered task issues ──┘
+  create ──▶ issue (status:draft) ──▶ plan ──▶ issue (status:ready) ──▶ build ──▶ PR (status:built) ──▶ you merge
+   scope           no spec yet          spec                              one PR, any size
 ```
 
-- **Tasks & bugs** become GitHub issues with a spec comment.
-- **Features** become a committed markdown doc under `.orc/features/F###-slug.md` that `plan` fans out into ordered task issues. Features are gated behind a Pennant flag (created as the feature's first task), so each task merges to `main` behind the flag and you flip it when the feature is whole — no long-lived feature branch.
+Everything is a GitHub issue — no task/feature split, no size threshold.
 
-## Autonomy & gates
+- **`create`** resolves scope and open questions, then files the issue(s). It
+  splits into multiple issues only when the work is genuinely independent, never
+  because it looks "too big." Every issue it files reads `Open Questions: None.`
+- **`plan`** explores the codebase, picks the technical approach, and writes the
+  spec as an issue comment. It's the sole owner of spec-writing, and holds the
+  spec to the same bar `build` re-checks: machine-verifiable acceptance criteria
+  and `Open Questions: None.`
+- **`build`** decomposes the spec into a dependency-ordered task list. Independent
+  tasks run in parallel via subagents — each dispatched with the model that fits
+  its complexity — while genuinely dependent tasks run in sequence. Any size of
+  issue becomes one PR.
 
-`build` (and `plan`) run unattended when `ORC_AUTONOMOUS=1` is set — the GitHub Action sets it. In that mode there is no human to answer questions, so every decision point is a **gate**: a checkpoint where, if a condition isn't met, `build` leaves its branch pushed for inspection, posts a `🚧 Build paused` comment explaining why, sets `status:blocked`, and exits. You fix the cause and re-run `build`, which **resets to `origin/main`** and starts fresh.
+## Focused verification
 
-The seven gates:
+`build` verifies with **scoped/filtered** test runs — only the tests around what
+each task changed — at every point (per wave, pre-commit, pre-PR). The full
+suite is left to **CI**, which `build` watches; a failure there is handled by
+`ci-debugger` with one fix-and-repush attempt. Each repo's `CLAUDE.md` carries a
+standardized **`## Focused Verification`** section (distinct from
+`## Verification`) so `build` has a deterministic place to find the filtered
+command — the command itself is necessarily per-repo/per-language.
+
+## Gates
+
+`build` runs unattended and never guesses. At any decision point it can't safely
+pass, it **gates**: commits and pushes its branch for inspection, comments the
+reason on the issue, sets `status:blocked`, and stops. Fix the cause and re-run —
+`build` resets to `origin/main` and rebuilds from scratch.
 
 | Gate | Trips when |
 |---|---|
-| Spec | no spec, or acceptance criteria aren't machine-verifiable |
-| Confidence | material ambiguity between the spec and the codebase |
-| Scope | the change balloons past a single task (≈20+ files) — run `plan` to split |
+| Spec | no spec, acceptance criteria aren't machine-verifiable, or Open Questions ≠ `None.` |
+| Confidence | material ambiguity between the spec and the codebase (not a size check) |
 | Ambiguity | mid-build, a decision the spec doesn't cover |
-| Gate/verify | tests or the pre-commit gate fail and can't be safely auto-fixed |
+| Gate/verify | focused tests or CI fail and can't be safely auto-fixed |
 | Review blocker | a review agent raises a BLOCKER that isn't safely auto-fixable (includes destructive-migration risk) |
-| Missing infra | no `AGENTS.md` gate, or a feature task with no flag |
+| Missing infra | `CLAUDE.md` has no `## Verification` / `## Focused Verification` section |
+
+There is **no scope gate** — issue size never stops a build.
 
 ## Labels
 
-`status:draft` → `status:ready` → (`status:building`) → `status:blocked` (needs you) or `status:built` (PR open, needs your merge). Type is `type:task` or `type:bug`. Labels self-provision when a skill first needs them.
-
-## Invoking build
-
-- Comment `@claude implement this` on a `status:ready` issue (via the Action), **or**
-- `/orc:build 123` — a specific task/bug issue, **or**
-- `/orc:build F001` — the next unbuilt task in feature F001.
+`status:draft` (scoped, needs a spec) → `status:ready` (specced, buildable) →
+`status:building` → `status:blocked` (needs you) or `status:built` (PR open,
+needs your merge). Bugs additionally carry `type:bug`. Labels self-provision
+when a skill first needs them.
 
 ## Versioning
 
-`plugin.json`'s `version` is semver and is the cache key Claude Code uses to decide whether an installed copy needs updating — pushing commits alone does not update anyone already installed. **Bump it in the same PR as any change you want to ship**, and record it in `CHANGELOG.md`. See [Version management](https://code.claude.com/docs/en/plugins-reference#version-management).
+`plugin.json`'s `version` is semver and is the cache key Claude Code uses to
+decide whether an installed copy needs updating — pushing commits alone does not
+update anyone already installed. **Bump it in the same PR as any change you want
+to ship**, and record it in `CHANGELOG.md`. See
+[Version management](https://code.claude.com/docs/en/plugins-reference#version-management).

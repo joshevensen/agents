@@ -1,59 +1,73 @@
 ---
 name: plan
-description: Turn a feature plan doc into ordered task issues, each with a build-ready spec. Feature-flag setup is always task #1. Runs autonomously when the doc's Open Questions are resolved. Invoke as /orc:plan F001.
+description: Take a draft issue from /orc:create, explore the codebase, choose a technical approach, and write a build-ready spec onto the issue. Sets status:ready when the spec is complete. Invoke as /orc:plan {number}.
 model: sonnet
 ---
 
-`plan` fans a feature doc out into the task issues that `/orc:build` will implement one at a time. It writes the issue numbers back into the doc, which stays the feature's tracker. It runs unattended when the plan is complete — but stops rather than invent scope.
+`plan` turns a scoped issue into a buildable one. It reads the issue `create`
+produced, researches the codebase, decides how to implement it, and writes the
+spec as a comment on the issue. It owns all spec-writing — the logic that used
+to live in both `create` and the old feature-planning step now lives here alone.
 
 ## Steps
 
-### 0. Load the feature
+### 1. Load the issue
 
-Require a feature id (`F###`). Read `.orc/features/{id}-*.md`. Parse the frontmatter (`flag`, `status`) and the **Tasks (in order)** list.
+Require an issue number (`/orc:plan {number}`). Invoke `issue-loader` with it.
+Use the returned title, body, labels, and any existing spec comment.
 
-### 1. Detect mode
-
-```bash
-echo "${ORC_AUTONOMOUS:-0}"
-```
-
-### 2. Readiness check
-
-If **Open Questions** is not `None.`:
-- **Interactive:** work through them with the user and update the doc.
-- **Autonomous:** stop. Report that `{id}` has unresolved Open Questions and cannot be planned unattended. (Features have no issue to comment on — this is reported, not gated onto an issue.)
-
-Confirm task #1 is the `{flag}` feature-flag setup. If missing, insert it.
-
-### 3. Generate specs (parallel)
-
-For each task in the list **that does not yet have an issue number** (fresh runs: all of them; re-runs: only new ones), invoke `spec-writer` in parallel. Pass each:
-- **Type:** `task`
-- **Context:** the full feature doc + this task's line/scope. For task #1, the context is "register the `{flag}` Pennant flag" — a small, mechanical spec.
-- **Output:** `.orc/tmp/{id}-{i}-spec.md`
-
-### 4. Create the issues
-
-For each generated task, in order:
+Set it to `status:draft` while a spec is being written or revised:
 
 ```bash
-gh label create "type:task" -f >/dev/null 2>&1 || true
-n=$(gh issue create --title "{task title}" \
-  --body "Part of feature {id}. {one-line intent}" \
-  --label "type:task,status:ready" --json number --jq .number)
-gh issue comment $n --body-file .orc/tmp/{id}-{i}-spec.md
+gh issue edit {number} --remove-label "status:ready" --add-label "status:draft" 2>/dev/null || \
+  gh issue edit {number} --add-label "status:draft"
 ```
 
-If a task's spec still has Open Questions, create it `status:draft` instead of `status:ready` and note it.
+### 2. Research the codebase
 
-### 5. Update the tracker
+Explore what already exists before choosing an approach. Read `CLAUDE.md` for
+conventions and the project's `## Verification` / `## Focused Verification`
+commands. Focus on whatever the work touches:
 
-Write each new issue number into the doc's **Tasks (in order)** checklist (`- [ ] #{n} — {title}`), set frontmatter `status: planned`, and remove the scratch specs (`rm .orc/tmp/{id}-*-spec.md`).
+- models, migrations, and schema in scope
+- routes, controllers, services, jobs, or integrations in scope
+- frontend patterns, if UI is touched
+- existing tests that reveal expected behavior of related code
+
+You are choosing the technical approach: what to build on, which conventions to
+follow, and every non-obvious constraint the implementer needs.
+
+### 3. Write the spec
+
+Invoke `spec-writer`, passing the issue body (scope and intent from `create`),
+whether it's a bug (`type:bug` present), and an output path of
+`.orc/tmp/{number}-spec.md`. It fills `${CLAUDE_PLUGIN_ROOT}/templates/spec.md`.
+
+**Every path the spec cites must actually exist** — a phantom path trips
+`build`'s confidence gate.
+
+### 4. Resolve open questions
+
+Read the drafted spec and surface its **Open Questions** and any acceptance
+criterion that isn't cleanly machine-verifiable. Work through them with the
+user, folding answers back into the spec, until **Open Questions reads `None.`**
+and every acceptance criterion is tied to a test, command, or observable
+outcome. This is the gate — the same one `build` re-checks. Do not weaken it.
+
+### 5. Post the spec and set status
+
+```bash
+gh issue comment {number} --body-file .orc/tmp/{number}-spec.md
+rm .orc/tmp/{number}-spec.md
+```
+
+- **Open Questions is `None.` and every criterion is verifiable** →
+  `gh issue edit {number} --remove-label status:draft --add-label status:ready`.
+- **Anything still open** → leave `status:draft` and tell the user what remains.
 
 ### 6. Report
 
 ```
-Feature {id} planned — {k} task issues created.
-Build them in order: /orc:build {id} (repeats to pick up the next after each merge).
+#{number} specced — {ready to build | still draft: {what's open}}.
+Next: /orc:build {number}.
 ```

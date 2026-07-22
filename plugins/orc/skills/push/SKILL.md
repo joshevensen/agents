@@ -4,7 +4,7 @@ description: Commit uncommitted changes with a real message, run the AI review, 
 model: sonnet
 ---
 
-`push` is the quick, local sibling of `build`: for changes you made by hand rather than through a spec. It always runs the AI review before anything reaches a PR — that's non-negotiable, since review is what catches bugs headed for `main`, spec or no spec. It never merges.
+`push` is the quick, local sibling of `build`: for changes you made by hand rather than through a spec — seeing the code directly, not going through `create`/`plan`/`build`. It always runs the AI review before anything reaches a PR — that's non-negotiable, since review is what catches bugs headed for `main`, spec or no spec. It never merges.
 
 ## Steps
 
@@ -39,7 +39,21 @@ git push -u origin HEAD
 
 ### 6. Review
 
-Invoke `/orc:review` with base `main`. It auto-fixes safe findings itself and commits them (`fix: address review findings`). For residual BLOCKERs and WARNINGs, work through them interactively (`review` offers `(f)/(r)` per finding when run standalone):
+Run the AI review over the diff against `main` — the same orchestration `build`
+folds in. Gather the diff (`git diff main...HEAD`), then run all five agents in
+parallel, passing each the full diff (and any notes you have — there's no spec):
+
+- `review-correctness`, `review-security`, `review-quality`, `review-impact`
+- `deploy-risk-scanner` — `HIGH` risk counts as a BLOCKER, `low` as a NOTE
+
+Then run `/code-review` over the same diff as a sixth pass; if unavailable, note
+it and continue. Fill `${CLAUDE_PLUGIN_ROOT}/templates/ai-review.md` with the
+results for the PR body.
+
+Auto-fix clearly safe findings (lint, missing import, type error, typo, dead
+code the diff introduced) and commit them (`fix: address review findings`) —
+never anything that changes behavior. For residual BLOCKERs and WARNINGs, work
+through them interactively, `(f)` fix / `(r)` reply-defer per finding:
 
 **`(f)` — Fix:** show the exact edit, confirm, apply, then commit:
 ```bash
@@ -48,7 +62,7 @@ git commit -am "fix: {brief description of the finding}"
 
 **`(r)` — Reply/defer:** note it for the PR body, no commit.
 
-Once every finding is resolved or deferred, push whatever `review` and this step committed:
+Once every finding is resolved or deferred, push whatever review committed:
 ```bash
 git push
 ```
