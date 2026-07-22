@@ -1,6 +1,6 @@
 ---
 name: changelog-writer
-description: Reads the branch diff and existing CHANGELOG.md, then writes a new changelog entry in the repo's existing changelog convention. Used by /orc:build after implementation, before opening the PR.
+description: Reads the branch diff and existing CHANGELOG.md, then writes a new changelog entry in the repo's existing changelog convention. Used by /orc:build after implementation and review, as part of finishing up before merge readiness.
 tools: Bash, Read
 model: haiku
 ---

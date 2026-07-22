@@ -2,6 +2,19 @@
 
 Tracks the `orc` plugin's `version` in `.claude-plugin/plugin.json`. Bump that field with every change you want installed copies to receive — Claude Code caches plugins by version, so pushing commits alone does not update anyone already on a pinned version. Follow [semver](https://semver.org): MAJOR for breaking changes, MINOR for new features, PATCH for fixes.
 
+## [0.4.0]
+
+### Added
+- `build` opens a **draft PR right after branching** (step 5) and commits+pushes after every wave, instead of one commit at the end and a PR opened only once everything is done — the diff now fills in live as the build progresses. If a previous run left a draft PR on this branch, it's reused (and re-drafted if needed) rather than recreated
+- `build` marks the PR **ready for review** immediately before the AI review step (step 9) — the exact signal that separates "still implementing" from "implementation done, only review/CI/mergeability left"
+- The AI review now posts as a **PR comment** (`gh pr comment`) with a `sha:`/`verdict:` marker, never folded into the PR description — this is what makes a stale review distinguishable from a fresh one
+- `/orc:resume` now only acts once a PR is ready for review, never against a draft PR (implementation still in question there — a full `/orc:build` rebuild is correct, not a resume). Before touching CI/mergeability, it checks the AI-review comment's `sha:` marker against current HEAD: a fresh `PASS` skips straight to the merge-readiness tail, a fresh `BLOCK` stops and asks you to actually fix it, and a stale comment (HEAD moved) triggers a real re-review rather than trusting old output
+- A new, optional `## CI-Only Verification` section in `CLAUDE.md`: suites listed there (Playwright/e2e, anything too heavy for build's own scoped runs) are never run by `build`, in any form — always left to CI. `setup` detects heavy-suite signals (`playwright.config.*`, `cypress.config.*`, e2e-ish script names) and offers to scaffold it
+
+### Changed
+- `push` now opens its PR before running review (steps 6 and 7 swapped) so review has something to comment on, matching the new "review is a comment, never the description" rule
+- `deploy-risk-scanner` and `changelog-writer`'s descriptions no longer assume a fixed PR-existence timing, since that now differs between `build`, `push`, and `bump`
+
 ## [0.3.0]
 
 ### Added

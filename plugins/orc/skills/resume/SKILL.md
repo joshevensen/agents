@@ -1,32 +1,35 @@
 ---
 name: resume
-description: Continue a build that stopped after its PR was already open — re-runs CI and mergeability without redoing implementation, review, or the PR itself. Use for a blocked issue where the block was an infra flake or a fix you've already applied, not a foundational problem. Invoke as /orc:resume {number}.
+description: Continue a build that stopped after its PR reached ready-for-review — re-checks review freshness, then CI and mergeability, without redoing implementation. Use for a blocked issue past the review gate, not mid-implementation. Invoke as /orc:resume {number}.
 model: sonnet
 ---
 
 `build` always rebuilds from scratch on a rerun — deliberately, so every run is
-deterministic. That's right when the block is foundational (spec, confidence,
-ambiguity, a review blocker mid-implementation): the branch that produced it
-was wrong or incomplete, and there's no saved per-wave state to resume into
-safely. `resume` covers the one case where a full rebuild is pure waste: the
-PR is **already open**, meaning implementation, review, docblocks, and the
-changelog all already succeeded — only the CI/mergeability tail failed. That
-happens on a real regression, but also on infra flakes with no code fix at
-all (a flaky runner, an environment mismatch between a remote session and CI).
-Rebuilding from scratch re-does everything to fix nothing.
+deterministic. That's right whenever the PR is still **draft**: implementation
+itself is still in question there (an ambiguity gate, a failed wave, an
+unfinished review pass), and there's no saved per-wave state to resume into
+safely. `resume` only ever acts once the PR is **marked ready for review** —
+`build` sets that exactly once implementation is done, right before the review
+step. Past that point, a gate means the code is fine and something downstream
+failed: a review finding needing a second look, a CI flake, a merge conflict.
+Rebuilding from scratch there re-does real, correct work to fix nothing.
 
 ## `--dry-run`
 
 `/orc:resume {number} --dry-run` runs steps 1-3 exactly as normal (they're
-read-only) and, in step 4, still watches CI and checks mergeability — those
-are read-only too. Skip only the mutations a real fix would need: if CI fails,
-show `ci-debugger`'s diagnosis but don't commit/push its fix; if the PR is
-`CONFLICTING`, show `conflict-classifier`'s classification but don't rebase,
-resolve, or force-push; and skip the final `gh issue edit` to `status:built`.
-End with:
+read-only), and in step 4 actually runs the review agents if review turns out
+stale (that's read-only until the final post) — local auto-fix commits still
+happen so you can inspect them, but skip the `gh pr comment` post itself and
+print what it would have said. In step 5, still watch CI and check
+mergeability — those are read-only too. Skip only the mutations a real fix
+would need: if CI fails, show `ci-debugger`'s diagnosis but don't commit/push
+its fix; if the PR is `CONFLICTING`, show `conflict-classifier`'s
+classification but don't rebase, resolve, or force-push; skip the final `gh
+issue edit` to `status:built`. End with:
 ```
-DRY RUN — PR #{pr}: {CI status, diagnosis if failing} / {mergeable status,
-classification if conflicting}. Re-run without --dry-run to apply and resume.
+DRY RUN — PR #{pr}: review {fresh: PASS/BLOCK | stale, would re-review | none, would review}.
+CI: {status, diagnosis if failing}. Mergeable: {status, classification if conflicting}.
+Re-run without --dry-run to apply and resume.
 ```
 
 ## Steps
@@ -46,21 +49,27 @@ Invoke `issue-loader` with `{number}`. Use the returned slug and status.
   otherwise there's nothing to continue. Stop.
 - **`status:blocked`** — continue to step 2.
 
-### 2. Find the PR
+### 2. Find the PR and check it's past the review gate
 
 ```bash
 gh pr list --head "issue/{number}-{slug}" --state all \
-  --json number,url,state,headRefName --jq '.[0]'
+  --json number,url,state,isDraft --jq '.[0]'
 ```
 
-- **No PR found** — the previous run stopped before step 12 of `build`
-  (spec, confidence, missing-infra, ambiguity, focused-verification, or a
-  review-blocker gate). There's no completed implementation to resume into.
-  Report this and point to `/orc:build {number}` for a full rebuild. Stop.
-- **PR found but `MERGED` or `CLOSED`** — status:blocked doesn't match reality
-  (issue should be `status:built`, or the PR was closed by hand). Report the
-  mismatch and stop rather than guessing what the user intended.
-- **PR found and `OPEN`** — continue to step 3.
+- **No PR found** — the previous run gated before step 5 of `build` (spec,
+  confidence, or missing-infra). Nothing exists yet to resume into. Report
+  this and point to `/orc:build {number}`. Stop.
+- **PR found but `MERGED` or `CLOSED`** — `status:blocked` doesn't match
+  reality (issue should be `status:built`, or the PR was closed by hand).
+  Report the mismatch and stop rather than guessing what the user intended.
+- **PR found, `OPEN`, but still `isDraft: true`** — implementation isn't
+  finished (a gate before step 9 of `build`: ambiguity or a focused-verification
+  failure mid-wave). There's real but incomplete work on the branch — resuming
+  into it risks building on a decision that was never actually settled. Report
+  this and point to `/orc:build {number}` (which reuses this draft PR rather
+  than recreating it). Stop.
+- **PR found, `OPEN`, `isDraft: false`** — implementation is done and the PR
+  reached the review gate. Continue to step 3.
 
 ### 3. Check out the existing branch
 
@@ -73,9 +82,41 @@ git switch "issue/{number}-{slug}"
 git fetch origin main
 ```
 
-### 4. Re-run merge readiness
+### 4. Check review freshness, re-review if needed
 
-This mirrors `build`'s step 13 exactly — keep both in sync if either changes.
+Look for the most recent AI-review comment and its `sha:`/`verdict:` marker
+(see `${CLAUDE_PLUGIN_ROOT}/templates/ai-review.md`):
+
+```bash
+comment_body=$(gh pr view {pr} --json comments \
+  --jq '[.comments[] | select(.body | test("<!-- orc:ai-review sha:"))] | last | .body')
+review_sha=$(echo "$comment_body" | grep -oP 'sha:\K[a-f0-9]+')
+review_verdict=$(echo "$comment_body" | grep -oP 'verdict:\K[A-Z]+')
+head_sha=$(git rev-parse HEAD)
+```
+
+- **No such comment** — review never completed for the current implementation
+  (a run crashed between step 9 and posting it). Treat as stale: run review.
+- **`review_sha` == `head_sha`** — fresh. Trust it without re-running anything:
+  - `verdict:PASS` (or `WARNING`) — skip straight to step 5.
+  - `verdict:BLOCK` — nothing has changed since the blocker was found. Report
+    it and stop; don't silently retry the same review. Either fix it and push
+    a commit yourself, then re-run `/orc:resume`, or resolve it manually.
+- **`review_sha` != `head_sha`** — stale: HEAD moved since that comment (a
+  manual fix was pushed, or a prior resume attempt did). Re-review — this
+  mirrors `build`'s steps 10-11 exactly, keep both in sync if either changes:
+  run all five review agents plus `/code-review` in parallel against
+  `git diff origin/main...HEAD`, auto-fix safe findings and re-verify, fill
+  `ai-review.md` with the post-auto-fix `git rev-parse HEAD` as the new
+  `sha:` marker, and post it via `gh pr comment` — never the PR description.
+  Then run `changelog-writer`/docblocks the same way `build` step 11 does.
+  If a residual BLOCKER remains, **gate: review blocker** (commit and push
+  what exists, comment on the issue, `status:blocked`, stop). Otherwise
+  continue to step 5.
+
+### 5. Merge readiness
+
+This mirrors `build`'s step 12 exactly — keep both in sync if either changes.
 
 **CI:**
 ```bash
@@ -104,7 +145,7 @@ file is marked complex, **gate: gate/verify** with the conflicting sections.
 gh issue edit {number} --remove-label "status:building,status:blocked" --add-label "status:built"
 ```
 
-### 5. Report
+### 6. Report
 
 ```
 PR resumed for #{number} — {pr-url}

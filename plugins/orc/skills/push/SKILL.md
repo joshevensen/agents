@@ -8,13 +8,15 @@ model: sonnet
 
 ## `--dry-run`
 
-`/orc:push --dry-run` runs the size check, commits locally (step 5), and runs
-the full AI review (step 6) exactly as normal — real commits on a real local
-branch, inspectable with `git log` / `git diff origin/main...HEAD`. It skips
-`git push` in step 5 and every step afterward that needs a pushed branch: no
-`git push` after review fixes, no `gh pr create` in step 7 (print the title
-and body it would have used instead), and step 8 (CI, mergeability) has
-nothing real to check without a pushed PR, so skip it and say so. End with:
+`/orc:push --dry-run` runs the size check and commits locally (step 5) exactly
+as normal — real commits on a real local branch, inspectable with `git log` /
+`git diff origin/main...HEAD`. It skips `git push` there and everywhere after.
+Step 6's `gh pr create` is skipped (print the title/body it would have used
+instead — there's no pushed branch for a real PR to attach to anyway). Step
+7's review agents still run in full (local, read-only) and auto-fixes still
+commit locally, but the final `gh pr comment` is skipped (print what it would
+have posted). Step 8 (CI, mergeability) has nothing real to check without a
+pushed PR, so skip it and say so. End with:
 ```
 DRY RUN — {n} commit(s) on local branch {branch}, not pushed. Would open PR:
 "{message}" against main. Re-run without --dry-run to push and open it.
@@ -51,7 +53,22 @@ git commit -m "{message}"
 git push -u origin HEAD
 ```
 
-### 6. Review
+### 6. Open PR
+
+Open the PR now, before review — review needs a PR to comment on:
+
+```bash
+pr=$(gh pr view --json number --jq .number 2>/dev/null)
+```
+
+If none exists, create one — `gh pr create` has no `--json`, it prints only
+the URL, so read `{pr}` back from that:
+```bash
+pr_url=$(gh pr create --title "{message}" --body "{message}" --base main)
+pr=$(basename "$pr_url")
+```
+
+### 7. Review
 
 Run the AI review over the diff against `origin/main` — the same orchestration
 `build` folds in. Refresh it first (`git fetch origin main` — push never fetches
@@ -63,8 +80,7 @@ each the full diff (and any notes you have — there's no spec):
 - `deploy-risk-scanner` — `HIGH` risk counts as a BLOCKER, `low` as a NOTE
 
 Then run `/code-review` over the same diff as a sixth pass; if unavailable, note
-it and continue. Fill `${CLAUDE_PLUGIN_ROOT}/templates/ai-review.md` with the
-results for the PR body.
+it and continue.
 
 Auto-fix clearly safe findings (lint, missing import, type error, typo, dead
 code the diff introduced) and commit them (`fix: address review findings`) —
@@ -76,25 +92,19 @@ through them interactively, `(f)` fix / `(r)` reply-defer per finding:
 git commit -am "fix: {brief description of the finding}"
 ```
 
-**`(r)` — Reply/defer:** note it for the PR body, no commit.
+**`(r)` — Reply/defer:** note it in the review comment, no commit.
 
 Once every finding is resolved or deferred, push whatever review committed:
 ```bash
 git push
 ```
-Do not open the PR before this push — otherwise fixes stay local-only and the PR won't reflect them.
 
-### 7. Open PR
-
+Fill `${CLAUDE_PLUGIN_ROOT}/templates/ai-review.md` with each section's status
+and findings, capture the current commit (`git rev-parse HEAD` — after any
+fix commits above) for the template's `sha:` marker, and post it as a **PR
+comment** — never fold review content into the PR description:
 ```bash
-pr=$(gh pr view --json number --jq .number 2>/dev/null)
-```
-
-If none exists, create one — `gh pr create` has no `--json`, it prints only
-the URL, so read `{pr}` back from that:
-```bash
-pr_url=$(gh pr create --title "{message}" --body "{ai-review summary from step 6}" --base main)
-pr=$(basename "$pr_url")
+gh pr comment {pr} --body-file {filled-template}
 ```
 
 ### 8. Merge readiness

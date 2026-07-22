@@ -107,6 +107,24 @@ touching existing content.
 `build` gates on `## Verification` (or `## Focused Verification`) being present;
 without them it gates immediately on every issue.
 
+While scanning, also check for heavy/slow suites — `playwright.config.*`,
+`cypress.config.*`, or script names containing `e2e`/`playwright`/`cypress`/
+`browser`. If found, propose a third, optional section (same show/confirm
+flow; skip silently if declined or nothing heavy is found — `build` doesn't
+gate on this one):
+```
+## CI-Only Verification
+Suites listed here are never run by `build`, not even scoped — CI is the
+only place they execute:
+  - Playwright end-to-end tests (`npm run test:e2e`) — slow, browser-driven
+```
+Note in the final report (step 9) that repos pushing per-wave commits to a
+draft PR (see `build` step 5) may want their CI workflow to skip these heavy
+jobs while the PR is draft (`if: github.event.pull_request.draft == false`)
+— but don't edit the repo's CI workflow files to add this; that's much more
+invasive than a `CLAUDE.md` section and varies too much by provider to do
+safely from here.
+
 ### 5. PR template
 
 Compare `.github/PULL_REQUEST_TEMPLATE.md` against

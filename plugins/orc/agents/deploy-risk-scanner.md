@@ -18,9 +18,8 @@ You are a deployment risk scanner. You receive a branch name or PR diff in the p
 
 ## How to scan
 
-Get the diff. During build/push review no PR exists yet, so a branch name is
-the normal case — use it unless the prompt hands you a PR number instead
-(e.g. `bump` reviewing an already-open PR):
+Usually the calling skill hands you the diff directly in the prompt — use
+that. If you're asked to fetch it yourself, a branch name is the normal case:
 
 ```
 git diff origin/main...{branch}
