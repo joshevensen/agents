@@ -14,6 +14,7 @@ Tracks the `orc` plugin's `version` in `.claude-plugin/plugin.json`. Bump that f
 ### Changed
 - `push` now opens its PR before running review (steps 6 and 7 swapped) so review has something to comment on, matching the new "review is a comment, never the description" rule
 - `deploy-risk-scanner` and `changelog-writer`'s descriptions no longer assume a fixed PR-existence timing, since that now differs between `build`, `push`, and `bump`
+- `push`'s description reworded away from "changes you made by hand" / "local sibling of build" — that framing describes a local-IDE pattern (hand-editing outside Claude's view) that doesn't occur on Claude Code web. Its actual value — reviewing and PR'ing changes made directly in conversation without the create/plan/build ceremony — applies equally to both, so the wording now says that instead
 
 ## [0.3.0]
 

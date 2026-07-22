@@ -1,10 +1,10 @@
 ---
 name: push
-description: Commit uncommitted changes with a real message, run the AI review, push, and open a PR — no merge. Use for manual edits that don't warrant a full /orc:create + /orc:build cycle.
+description: Commit uncommitted changes with a real message, run the AI review, push, and open a PR — no merge. Use for changes made directly in conversation that don't warrant a full /orc:create + /orc:build cycle.
 model: sonnet
 ---
 
-`push` is the quick, local sibling of `build`: for changes you made by hand rather than through a spec — seeing the code directly, not going through `create`/`plan`/`build`. It always runs the AI review before anything reaches a PR — that's non-negotiable, since review is what catches bugs headed for `main`, spec or no spec. It never merges.
+`push` is the quick sibling of `build`: for changes made directly in conversation rather than through a spec — you asked, the changes landed, and now they need review and a PR without going through `create`/`plan`/`build`. It always runs the AI review before anything reaches a PR — that's non-negotiable, since review is what catches bugs headed for `main`, spec or no spec. It never merges.
 
 ## `--dry-run`
 
