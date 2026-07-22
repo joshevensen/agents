@@ -24,11 +24,24 @@ The interactive `/plugin` command isn't available in web sessions, and plugins m
    ```bash
    claude plugin marketplace add joshevensen/hexbyte-plugins
    claude plugin install orc@hexbyte
+
+   # orc drives GitHub through the gh CLI, which isn't preinstalled in web
+   # sessions. Install it here; it auto-authenticates via the GH_TOKEN that
+   # web environments already expose (no `gh auth login` needed).
+   if ! type -p gh >/dev/null; then
+     mkdir -p -m 755 /etc/apt/keyrings
+     wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+       > /etc/apt/keyrings/githubcli-archive-keyring.gpg
+     chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
+     echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+       > /etc/apt/sources.list.d/github-cli.list
+     apt-get update && apt-get install -y gh
+   fi
    ```
 
-3. **Save changes.** The script runs on each new session, so orc is installed and its `/orc:*` skills are available. Existing sessions aren't affected — start a new one.
+3. **Save changes.** The script runs on each new session, so orc is installed, `gh` is on the PATH and authenticated, and the `/orc:*` skills are available. Existing sessions aren't affected — start a new one.
 
-Requires the environment's network access to reach `github.com` (the default **Trusted** policy does).
+Requires the environment's network access to reach `github.com` **and `cli.github.com`** (the default **Trusted** policy does). Under a locked-down policy that blocks the `gh` install source, this won't work — orc needs `gh` present, so either allow the install host in your policy or run orc from a Trusted environment.
 
 ## Skills
 

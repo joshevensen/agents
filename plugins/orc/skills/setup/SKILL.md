@@ -24,8 +24,12 @@ gh --version
 gh auth status
 ```
 
-If either fails, stop with instructions (install from https://cli.github.com, or
-run `gh auth login`).
+If either fails, stop with instructions:
+- **Local:** install from https://cli.github.com, or run `gh auth login`.
+- **Claude Code on the web:** `gh` isn't preinstalled and must be added to the
+  environment's **Setup script** — see the web-install section of the orc README.
+  It auto-authenticates via the `GH_TOKEN` web environments already expose, so no
+  `gh auth login` is needed once installed.
 
 ### 2. Labels
 

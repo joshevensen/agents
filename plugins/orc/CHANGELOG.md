@@ -7,6 +7,7 @@ Tracks the `orc` plugin's `version` in `.claude-plugin/plugin.json`. Bump that f
 ### Changed
 - `deploy-risk-scanner` and `conflict-classifier` now run on `sonnet` instead of `haiku` — both make semantic judgments feeding gates (deploy-risk's `HIGH` is a hard blocker; a misclassified conflict can trigger a bad auto-resolve), so the cheapest model was a false-negative risk
 - `changelog-writer` now matches the target repo's existing changelog convention (Unreleased-style or versioned) instead of always emitting a Keep-a-Changelog `## [Unreleased]` block, and returns a `Placement:` line telling `build` exactly where to insert the entry
+- Web install now provisions the `gh` CLI in the environment setup script — orc drives GitHub through `gh`, which isn't preinstalled in web sessions; it auto-authenticates via the `GH_TOKEN` those environments already expose. Documented in the README and referenced from `setup`'s preflight
 
 ### Fixed
 - `changelog-writer` now reads the full branch diff (`git diff origin/main...HEAD`) instead of `git diff HEAD~1`, which captured only the last commit and dropped most of a multi-commit build from the changelog
