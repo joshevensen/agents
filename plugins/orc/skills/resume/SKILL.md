@@ -142,6 +142,7 @@ file is marked complex, **gate: gate/verify** with the conflicting sections.
 
 **Once CI is green and the PR is mergeable:**
 ```bash
+gh label create "status:built" -f >/dev/null 2>&1 || true
 gh issue edit {number} --remove-label "status:building,status:blocked" --add-label "status:built"
 ```
 

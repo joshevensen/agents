@@ -4,11 +4,17 @@ description: Wire a repo for orc — labels, .orc directory, CLAUDE.md verificat
 model: sonnet
 ---
 
-The day-to-day loop (`create`, `plan`, `build`, `push`, `list`) self-provisions
-its own labels and needs no setup to work in a fresh repo. `setup` handles the
-few pieces of idempotent scaffolding that are more reliably done as one command
-than a manual checklist — most importantly the `CLAUDE.md` verification sections
-that make `build` project-agnostic.
+The day-to-day loop (`create`, `plan`, `build`, `resume`, `push`, `list`)
+self-provisions its own labels — each defensively `gh label create`s a bare
+version of any `status:*` label right before it's first needed — and needs no
+setup to work in a fresh repo. That self-provisioning is intentionally minimal
+(no color or description); `setup` still owns the canonical color/description
+for the full managed set, so it's worth running even on a repo where every
+label already exists — it upgrades bare, defensively-created labels to the
+real thing rather than leaving them as whatever GitHub's default looks like.
+`setup` also handles the few pieces of idempotent scaffolding that are more
+reliably done as one command than a manual checklist — most importantly the
+`CLAUDE.md` verification sections that make `build` project-agnostic.
 
 ## `--dry-run`
 

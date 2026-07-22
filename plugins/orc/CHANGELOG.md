@@ -19,6 +19,7 @@ Tracks the `orc` plugin's `version` in `.claude-plugin/plugin.json`. Bump that f
 ### Fixed
 - `setup` ran `manage-labels --prune` unconditionally on every run, silently deleting any label outside the managed set (a custom label you'd added yourself included) every single time — not just once. Pruning is now a separate, deliberate action, never part of the default flow
 - `setup`'s `## CI-Only Verification` section had no "already present, skip" check, unlike the other two `CLAUDE.md` sections — a rerun could re-propose or duplicate it. Now skips if the section already exists, matching the other two
+- `plan`, `build`, and `resume` added `--add-label` calls for `status:ready`/`status:building`/`status:blocked`/`status:built` with no defensive `gh label create` first — confirmed against GitHub's REST API docs that adding a nonexistent label 404s rather than auto-creating it. Only `create` self-provisioned (`status:draft`/`type:bug`); a repo that never ran `/orc:setup` would have broken the moment `plan` first tried to set `status:ready`. Every `--add-label` call across the pipeline now creates its label defensively first (bare, no color/description — `setup` still owns the canonical styling on top)
 
 ## [0.3.0]
 

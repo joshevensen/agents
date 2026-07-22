@@ -64,7 +64,12 @@ Referenced throughout as "**gate: {name}**". When a gate trips:
    What's needed: {the concrete fix}
    Resume: fix the above, then re-run `/orc:build {number}` (it resets to origin/main and rebuilds from scratch — the draft PR is reused, not recreated).
    ```
-3. `gh issue edit {number} --remove-label "status:building" --add-label "status:blocked"`.
+3. Create the label defensively first (idempotent — a no-op if it already
+   exists), then apply it:
+   ```bash
+   gh label create "status:blocked" -f >/dev/null 2>&1 || true
+   gh issue edit {number} --remove-label "status:building" --add-label "status:blocked"
+   ```
 4. Stop.
 
 If the user is actively in the loop, a gate may instead surface the problem and
@@ -125,6 +130,7 @@ Always start from a clean base so reruns are deterministic:
 ```bash
 git fetch origin main
 git switch -C issue/{number}-{slug} origin/main
+gh label create "status:building" -f >/dev/null 2>&1 || true
 gh issue edit {number} --remove-label "status:ready,status:blocked" --add-label "status:building"
 ```
 
@@ -321,6 +327,7 @@ is marked complex, **gate: gate/verify** with the conflicting sections.
 **Once CI is green and the PR is mergeable**, the issue is genuinely built —
 only now flip the label:
 ```bash
+gh label create "status:built" -f >/dev/null 2>&1 || true
 gh issue edit {number} --remove-label "status:building" --add-label "status:built"
 ```
 Setting this any earlier risks a gate firing after `status:building` has

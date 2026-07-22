@@ -29,9 +29,14 @@ Re-run without --dry-run to post it.
 Require an issue number (`/orc:plan {number}`). Invoke `issue-loader` with it.
 Use the returned title, body, labels, and any existing spec comment.
 
-Set it to `status:draft` while a spec is being written or revised:
+Set it to `status:draft` while a spec is being written or revised. Create
+both labels defensively first — idempotent, a no-op once `/orc:setup` or a
+prior run has already made them, but `--add-label` 404s on a label that's
+never existed in the repo at all:
 
 ```bash
+gh label create "status:draft" -f >/dev/null 2>&1 || true
+gh label create "status:ready" -f >/dev/null 2>&1 || true
 gh issue edit {number} --remove-label "status:ready" --add-label "status:draft" 2>/dev/null || \
   gh issue edit {number} --add-label "status:draft"
 ```
@@ -74,8 +79,11 @@ gh issue comment {number} --body-file .orc/tmp/{number}-spec.md
 rm .orc/tmp/{number}-spec.md
 ```
 
-- **Open Questions is `None.` and every criterion is verifiable** →
-  `gh issue edit {number} --remove-label status:draft --add-label status:ready`.
+- **Open Questions is `None.` and every criterion is verifiable**:
+  ```bash
+  gh label create "status:ready" -f >/dev/null 2>&1 || true
+  gh issue edit {number} --remove-label status:draft --add-label status:ready
+  ```
 - **Anything still open** → leave `status:draft` and tell the user what remains.
 
 ### 6. Report
