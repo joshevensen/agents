@@ -1,14 +1,15 @@
 ## Spec
 
 <!--
-The canonical spec for all buildable work — tasks and bugs, standalone or
-feature-derived. Posted as an issue comment; consumed by /orc:build.
+The canonical spec for all buildable work. Written onto an issue by /orc:plan
+as a comment; consumed by /orc:build.
 
 For the issue to reach status:ready, two things must hold:
   1. Every Acceptance Criterion is machine-verifiable (a test, command, or
      observable outcome proves it).
   2. Open Questions reads "None." — every ambiguity resolved and folded in.
-/orc:build gates on both. Do not weaken either to get a spec out the door.
+/orc:plan holds the spec to both before setting status:ready, and /orc:build
+re-checks both. Do not weaken either to get a spec out the door.
 -->
 
 ### Problem Statement

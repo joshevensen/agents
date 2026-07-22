@@ -16,7 +16,6 @@ MANAGED_LABELS=(
   "status:building|c2e0c6|Build in progress"
   "status:blocked|b60205|Build stopped at a gate, needs input"
   "status:built|0e8a16|PR open, awaiting manual merge"
-  "type:task|5319e7|A single, bounded change"
   "type:bug|d93f0b|A defect with reproduction steps"
   "dependencies|d93f0b|Pull requests that update a dependency file"
   "php|f9d0c4|PHP Dependabot change"

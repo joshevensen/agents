@@ -1,85 +1,80 @@
 ---
 name: create
-description: Discuss an idea, confirm whether it's a task, bug, or feature, then produce the right artifact — a task/bug issue with a spec, or a feature plan doc. Interactive and local. Pass /orc:create {number} to re-spec an existing issue.
+description: Discuss an idea at the product/scope level and produce one or more GitHub issues — no spec-writing. Splits work into separate issues when it's naturally independent. Ends only when every open question is resolved. Interactive and local.
 model: sonnet
 ---
 
-`create` is the human-judgment front of the pipeline. You talk through an idea; it researches the codebase, **proposes a type and confirms it with you**, then creates either a GitHub issue (task/bug) with a build-ready spec, or a feature plan doc that `/orc:plan` later fans out into tasks. It never guesses the type silently, and it never posts a spec with unresolved questions.
+`create` is the human-judgment front of the pipeline. You talk an idea through
+at the product and scope level, then produce the GitHub issue(s) that `/orc:plan`
+will later spec. It does **not** write specs and it does **not** explore the
+codebase for implementation detail — that is `plan`'s job. Its one hard rule:
+**it never ends with an unresolved open question.** Ask freely while discussing,
+but every issue it creates reads `Open Questions: None.`
 
 ## Steps
 
-### 0. Resolve mode
-
-If a number is passed (`/orc:create {number}`), this is a **re-spec** of an existing issue:
-- Load it with `issue-loader`.
-- Set it to `status:draft` (a spec is being revised).
-- Skip to step 3 (Draft the spec) using its existing type.
-
-Otherwise continue.
-
 ### 1. Discuss
 
-Ask what the user wants done. Use Read/Grep/Glob/Bash actively — look up the routes, models, files, or config they mention and surface existing patterns or constraints. Aim for 2–4 exchanges; capture:
-- what needs to happen
+Ask what the user wants and why. Read files or grep only enough to ground the
+conversation in what exists (does this route/model already exist? is there a
+similar feature to point at?) — this is scoping, not spec research. Aim for 2–4
+exchanges and capture:
+
+- what should change, from the user's perspective
 - why it matters
-- constraints, context, and known unknowns
+- scope boundaries — what's explicitly in and out
+- constraints and context the plan step will need
 
 Don't over-interview. If the first message is already clear, move on.
 
-### 2. Classify — and confirm
+### 2. Resolve every open question
 
-Propose exactly one type, with a one-line reason, and **wait for confirmation**:
+As questions surface — scope, priority, expected behavior, edge cases — raise
+them and get answers. **The discussion is not finished while any raised question
+is unanswered.** This is the same standard `plan`'s spec gate holds specs to,
+applied one stage earlier so `plan` inherits a clean scope.
 
-- **task** — a single, bounded change.
-- **bug** — something is broken; needs reproduction steps and a regression test.
-- **feature** — spans multiple tasks / subsystems. Becomes a plan doc, not an issue.
+### 3. Decide whether to split
 
-```
-This looks like a {type} — {reason}. Confirm, or tell me otherwise.
-```
+If the discussion reveals genuinely separable pieces of work — independent
+deliverables that could ship on their own — create one issue per piece.
+Splitting is part of the discussion, not a separate step.
 
-If the user disagrees, reclassify. On confirmation, branch: **feature → step 5**; task/bug → step 3.
+**There is no size threshold that forces a split.** A large but cohesive change
+is one issue; `build` handles issues of any size. Split only when the work is
+naturally independent, never because a single issue looks "too big."
 
-### 3. Draft the spec (task / bug)
+### 4. Create the issue(s)
 
-Invoke `spec-writer`, passing the type (`task`/`bug`), the discussion context, and an output path of `.orc/tmp/{slug}-spec.md`. It researches and fills `${CLAUDE_PLUGIN_ROOT}/templates/spec.md`.
+For each issue, write a body that captures the discussion at the scope level:
+what should change, why, what's in and out of scope, and any constraints `plan`
+needs. End the body with an `## Open Questions` section reading `None.` — every
+issue leaves discussion fully resolved. Do **not** write a spec; the issue has
+no acceptance criteria or file lists yet.
 
-### 4. Resolve, then post (task / bug)
-
-Read the drafted spec and surface its **Open Questions** and any acceptance criterion that isn't cleanly verifiable. Work through them with the user, folding answers back into the spec, until Open Questions reads `None.`
-
-Then create the issue and attach the spec:
+Apply `type:bug` when the work is a defect (so `plan` knows to spec a
+reproduction and a regression test). Otherwise no type label.
 
 ```bash
 # labels self-provision (idempotent)
-gh label create "type:{type}" -f >/dev/null 2>&1 || true
 gh label create "status:draft" -f >/dev/null 2>&1 || true
-gh label create "status:ready" -f >/dev/null 2>&1 || true
+gh label create "type:bug"     -f >/dev/null 2>&1 || true   # bugs only
 
-number=$(gh issue create --title "{title}" --body "{problem statement}" \
-  --label "type:{type},status:draft" --json number --jq .number)
-gh issue comment $number --body-file .orc/tmp/{slug}-spec.md
+number=$(gh issue create --title "{title}" --body "{body with Open Questions: None.}" \
+  --label "status:draft{,type:bug if a defect}" --json number --jq .number)
 ```
 
-- **Open Questions is `None.`** → `gh issue edit $number --remove-label status:draft --add-label status:ready`.
-- **Questions remain** → leave `status:draft`; tell the user what's still open.
+Every issue starts at `status:draft` — it has a resolved scope but no spec yet.
 
-Remove the scratch file (`rm .orc/tmp/{slug}-spec.md`). Report the issue number and whether it's ready to build.
+### 5. Report
 
-### 5. Feature plan doc
+```
+Created {n} issue(s):
+  #{number} — {title}
+  ...
 
-Allocate the next id:
-```bash
-mkdir -p .orc/features
-next=$(ls .orc/features 2>/dev/null | grep -oE '^F[0-9]+' | sort | tail -1)
-# F001 if none, else increment and zero-pad to 3 digits
+Next: /orc:plan {number} to research the codebase and write the spec.
 ```
 
-Discuss the feature enough to fill `${CLAUDE_PLUGIN_ROOT}/templates/feature-plan.md`: overview, goal, scope/out-of-scope, the Pennant flag key, and a first-cut ordered task list (task #1 is always flag setup). Write it to `.orc/features/{id}-{slug}.md` with `status: draft`.
-
-Report:
-```
-Feature {id} — {title}
-Plan: .orc/features/{id}-{slug}.md
-Run /orc:plan {id} when the plan is solid to break it into task issues.
-```
+If several issues were split from one discussion, note the relationship between
+them (e.g. "#12 must land before #13") so `plan`/`build` order is clear.
