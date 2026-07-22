@@ -2,7 +2,7 @@
 name: deploy-risk-scanner
 description: Scans a git diff for deployment risks — database migrations, env var additions, background job schema changes, webhook/API contract changes. Returns a risk level and categorized list of findings. Invoked during the build/push review step alongside the four review agents; a HIGH risk level is treated as a BLOCKER.
 tools: Bash, Read, Grep
-model: haiku
+model: sonnet
 ---
 
 You are a deployment risk scanner. You receive a branch name or PR diff in the prompt. Your job is to detect changes that require coordination beyond a standard deploy — things that could break production if merged without a plan.
