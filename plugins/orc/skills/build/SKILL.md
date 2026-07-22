@@ -158,9 +158,11 @@ git push -u origin issue/{number}-{slug}
 
 ### 10. Review (folded in)
 
-Review the branch's full diff against `main` before it becomes a PR. Run all
-five agents **in parallel**, passing each the spec, your implementation notes,
-and the full diff (`git diff main...HEAD`) — never the build conversation, so
+Review the branch's full diff against `origin/main` before it becomes a PR.
+Refresh it first (`git fetch origin main`) — the waves and verification above
+take time, so `origin/main` may have moved since step 5. Run all five agents
+**in parallel**, passing each the spec, your implementation notes, and the
+full diff (`git diff origin/main...HEAD`) — never the build conversation, so
 each reviews with fresh eyes:
 
 - `review-correctness` — acceptance criteria, scope drift, logic errors
@@ -195,13 +197,19 @@ etc.). Commit and push any changes.
 
 ### 12. Open PR
 
-```bash
-gh issue edit {number} --remove-label "status:building" --add-label "status:built"
-```
-
 Open the PR against `main` using the repo's PR template. Include the
 implementation notes and the AI-review summary in the body, and
-`Closes #{number}`. Post the PR URL as an issue comment.
+`Closes #{number}`.
+
+```bash
+pr_url=$(gh pr create --base main --title "{title}" --body "{body}")
+pr=$(basename "$pr_url")
+```
+
+`gh pr create` has no `--json` — it prints only the URL, so read `{pr}` back
+from that. Post the PR URL as an issue comment. **Do not change the issue's
+status label yet** — it stays `status:building` until step 13 confirms the PR
+is actually green and mergeable.
 
 ### 13. Merge readiness
 
@@ -228,6 +236,16 @@ If `CONFLICTING`: `git fetch origin && git rebase origin/main` to surface
 markers, invoke `conflict-classifier`. Auto-resolve files it marks simple,
 stage, `git rebase --continue`, then `git push --force-with-lease`. If any file
 is marked complex, **gate: gate/verify** with the conflicting sections.
+
+**Once CI is green and the PR is mergeable**, the issue is genuinely built —
+only now flip the label:
+```bash
+gh issue edit {number} --remove-label "status:building" --add-label "status:built"
+```
+Setting this any earlier risks a step-13 gate firing after `status:building`
+has already been replaced — the gate procedure's label swap would then have
+nothing to remove, leaving `status:built` and `status:blocked` on the issue at
+the same time.
 
 ### 14. Report
 

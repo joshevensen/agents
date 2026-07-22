@@ -60,8 +60,11 @@ reproduction and a regression test). Otherwise no type label.
 gh label create "status:draft" -f >/dev/null 2>&1 || true
 gh label create "type:bug"     -f >/dev/null 2>&1 || true   # bugs only
 
-number=$(gh issue create --title "{title}" --body "{body with Open Questions: None.}" \
-  --label "status:draft{,type:bug if a defect}" --json number --jq .number)
+# gh issue create has no --json/--jq — it prints only the issue URL, so pull
+# the number from that
+url=$(gh issue create --title "{title}" --body "{body with Open Questions: None.}" \
+  --label "status:draft{,type:bug if a defect}")
+number=$(basename "$url")
 ```
 
 Every issue starts at `status:draft` — it has a resolved scope but no spec yet.

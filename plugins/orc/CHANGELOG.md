@@ -13,6 +13,12 @@ Tracks the `orc` plugin's `version` in `.claude-plugin/plugin.json`. Bump that f
 - `changelog-writer` now reads the full branch diff (`git diff origin/main...HEAD`) instead of `git diff HEAD~1`, which captured only the last commit and dropped most of a multi-commit build from the changelog
 - `deploy-risk-scanner` now leads with the branch diff (`git diff origin/main...{branch}`) instead of `gh pr diff {pr_number}` — during build/push review, the case it's used for most, no PR exists yet, so a PR number was never available
 - `issue-loader`'s status example listed a non-existent `progress` label; corrected to `building`, matching the real `status:*` vocabulary
+- `bump`'s OSV vulnerability check sent lowercase ecosystem names (`packagist`, `github-actions`); OSV's real identifiers are `Packagist` and `GitHub Actions` (case- and spelling-exact), so every non-npm query was silently returning zero results — verified against the live API with a package carrying known CVEs
+- `bump`'s npm publish-recency check read `.publish_time` from the per-version registry endpoint, which has no such field; the timestamp only exists on the root package document under `.time["{version}"]` — verified against the live registry. The check always returned empty and never fired
+- `create`'s issue-creation command passed `--json`/`--jq` to `gh issue create`, which doesn't support either flag and errors — verified against the CLI reference. It now reads the issue number from the printed URL instead
+- `push`'s PR-creation command had the same `gh pr create --json` problem; same fix
+- `build` and `push` diffed for review against the local `main` branch instead of `origin/main`, risking a stale base since nothing keeps local `main` current; both now fetch and diff against `origin/main`. `push` additionally never fetched before its mergeability rebase, risking a stale ref there too
+- `build` set `status:built` before its CI/mergeability gate (step 13) ran; if that gate then tripped, the shared gate procedure's label swap had nothing to remove (`status:building` was already gone), leaving `status:built` and `status:blocked` on the issue at once. The label now flips to `status:built` only after CI is green and the PR is mergeable
 
 ## [0.2.0]
 

@@ -44,7 +44,13 @@ gh pr diff {pr} --repo {owner}/{repo}
 
 Parse all changed package entries from the diff — look for version bumps in `package.json`, `composer.json`, `package-lock.json`, `composer.lock`, or equivalent.
 
-For each package, extract `{package}`, `{old_version}`, `{new_version}`, and `{ecosystem}` (npm, packagist, github-actions, etc.).
+For each package, extract `{package}`, `{old_version}`, `{new_version}`, and its ecosystem, mapped to the **OSV ecosystem name** (case- and spelling-exact — OSV silently returns zero results for any other string):
+
+| Manifest | OSV ecosystem |
+|---|---|
+| `package.json` / `package-lock.json` | `npm` |
+| `composer.json` / `composer.lock` | `Packagist` |
+| GitHub Actions workflow files | `GitHub Actions` |
 
 #### OSV vulnerability check
 
@@ -52,15 +58,18 @@ For each package:
 ```bash
 curl -sf https://api.osv.dev/v1/query \
   -H "Content-Type: application/json" \
-  -d '{"package": {"name": "{package}", "ecosystem": "{ecosystem}"}, "version": "{new_version}"}'
+  -d '{"package": {"name": "{package}", "ecosystem": "{osv_ecosystem}"}, "version": "{new_version}"}'
 ```
 
 Flag any package where the response contains `vulns`.
 
 #### Publish recency (npm only)
 
+The per-version endpoint (`/{package}/{version}`) has no timestamp field — the
+publish time only exists on the root package document, keyed by version:
+
 ```bash
-curl -sf "https://registry.npmjs.org/{package}/{new_version}" | jq -r '.publish_time // empty'
+curl -sf "https://registry.npmjs.org/{package}" | jq -r --arg v "{new_version}" '.time[$v] // empty'
 ```
 
 Flag any package published less than 48 hours ago as a suspicious publish.

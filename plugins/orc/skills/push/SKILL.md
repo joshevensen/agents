@@ -39,9 +39,11 @@ git push -u origin HEAD
 
 ### 6. Review
 
-Run the AI review over the diff against `main` — the same orchestration `build`
-folds in. Gather the diff (`git diff main...HEAD`), then run all five agents in
-parallel, passing each the full diff (and any notes you have — there's no spec):
+Run the AI review over the diff against `origin/main` — the same orchestration
+`build` folds in. Refresh it first (`git fetch origin main` — push never fetches
+elsewhere, so this is the only chance), then gather the diff
+(`git diff origin/main...HEAD`), and run all five agents in parallel, passing
+each the full diff (and any notes you have — there's no spec):
 
 - `review-correctness`, `review-security`, `review-quality`, `review-impact`
 - `deploy-risk-scanner` — `HIGH` risk counts as a BLOCKER, `low` as a NOTE
@@ -71,12 +73,14 @@ Do not open the PR before this push — otherwise fixes stay local-only and the 
 ### 7. Open PR
 
 ```bash
-gh pr view --json number,url 2>/dev/null
+pr=$(gh pr view --json number --jq .number 2>/dev/null)
 ```
 
-If none exists, create one:
+If none exists, create one — `gh pr create` has no `--json`, it prints only
+the URL, so read `{pr}` back from that:
 ```bash
-gh pr create --title "{message}" --body "{ai-review summary from step 6}" --base main
+pr_url=$(gh pr create --title "{message}" --body "{ai-review summary from step 6}" --base main)
+pr=$(basename "$pr_url")
 ```
 
 ### 8. Merge readiness
@@ -91,7 +95,7 @@ If a check fails, fetch the log and diff, invoke `ci-debugger`, and confirm the 
 ```bash
 gh pr view {pr} --json mergeable --jq .mergeable
 ```
-If `CONFLICTING`: rebase onto `origin/main`, invoke `conflict-classifier`, resolve simple conflicts, surface complex ones to the user. Push `--force-with-lease`.
+If `CONFLICTING`: `git fetch origin && git rebase origin/main` to surface markers, invoke `conflict-classifier`, resolve simple conflicts, surface complex ones to the user. Push `--force-with-lease`.
 
 ### 9. Report
 
