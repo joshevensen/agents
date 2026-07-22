@@ -11,6 +11,8 @@ Tracks the `orc` plugin's `version` in `.claude-plugin/plugin.json`. Bump that f
 
 ### Fixed
 - `changelog-writer` now reads the full branch diff (`git diff origin/main...HEAD`) instead of `git diff HEAD~1`, which captured only the last commit and dropped most of a multi-commit build from the changelog
+- `deploy-risk-scanner` now leads with the branch diff (`git diff origin/main...{branch}`) instead of `gh pr diff {pr_number}` — during build/push review, the case it's used for most, no PR exists yet, so a PR number was never available
+- `issue-loader`'s status example listed a non-existent `progress` label; corrected to `building`, matching the real `status:*` vocabulary
 
 ## [0.2.0]
 

@@ -13,7 +13,7 @@ You are a GitHub issue loader. You receive an issue number in the prompt (and op
 - **title** — the issue title
 - **url** — the issue HTML URL
 - **labels** — all label names as a list
-- **status** — the single `status:*` label value (e.g. `ready`, `progress`, `draft`), or `none` if absent
+- **status** — the single `status:*` label value (e.g. `ready`, `building`, `draft`), or `none` if absent
 - **slug** — derived from the title: lowercase, spaces → hyphens, strip punctuation (e.g. "Add user auth" → `add-user-auth`)
 - **branch** — derived as `issue/{number}-{slug}` (uniform for every issue — regular changes and bugs all build the same way)
 - **body** — the full issue body text

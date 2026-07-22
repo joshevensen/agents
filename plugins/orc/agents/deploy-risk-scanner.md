@@ -18,13 +18,16 @@ You are a deployment risk scanner. You receive a branch name or PR diff in the p
 
 ## How to scan
 
-Get the diff:
-```
-gh pr diff {pr_number}
-```
-or if given a branch name:
+Get the diff. During build/push review no PR exists yet, so a branch name is
+the normal case — use it unless the prompt hands you a PR number instead
+(e.g. `bump` reviewing an already-open PR):
+
 ```
 git diff origin/main...{branch}
+```
+or, only if given a PR number:
+```
+gh pr diff {pr_number}
 ```
 
 Then grep the diff output for the patterns above.
