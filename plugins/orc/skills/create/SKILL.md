@@ -11,6 +11,22 @@ codebase for implementation detail — that is `plan`'s job. Its one hard rule:
 **it never ends with an unresolved open question.** Ask freely while discussing,
 but every issue it creates reads `Open Questions: None.`
 
+## `--dry-run`
+
+`/orc:create --dry-run` runs the full discussion and open-question resolution
+normally — nothing there touches GitHub anyway. At step 4, skip the label
+self-provisioning and `gh issue create` calls; instead show each issue exactly
+as it would be filed (title, body, labels) and stop:
+```
+DRY RUN — would create {n} issue(s):
+
+  {title} [labels: {labels}]
+  {body}
+  ...
+
+Re-run without --dry-run to file them.
+```
+
 ## Steps
 
 ### 1. Discuss
@@ -60,8 +76,11 @@ reproduction and a regression test). Otherwise no type label.
 gh label create "status:draft" -f >/dev/null 2>&1 || true
 gh label create "type:bug"     -f >/dev/null 2>&1 || true   # bugs only
 
-number=$(gh issue create --title "{title}" --body "{body with Open Questions: None.}" \
-  --label "status:draft{,type:bug if a defect}" --json number --jq .number)
+# gh issue create has no --json/--jq — it prints only the issue URL, so pull
+# the number from that
+url=$(gh issue create --title "{title}" --body "{body with Open Questions: None.}" \
+  --label "status:draft{,type:bug if a defect}")
+number=$(basename "$url")
 ```
 
 Every issue starts at `status:draft` — it has a resolved scope but no spec yet.

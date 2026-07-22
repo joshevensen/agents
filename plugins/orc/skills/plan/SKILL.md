@@ -9,6 +9,19 @@ produced, researches the codebase, decides how to implement it, and writes the
 spec as a comment on the issue. It owns all spec-writing — the logic that used
 to live in both `create` and the old feature-planning step now lives here alone.
 
+## `--dry-run`
+
+`/orc:plan {number} --dry-run` runs research, spec-writing, and open-question
+resolution exactly as normal — `spec-writer` only writes to the local
+`.orc/tmp/{number}-spec.md` scratch file, which is safe to leave in place for
+inspection (skip the `rm` in step 5 too, so you can read it after). Skip every
+`gh issue edit`/`gh issue comment` call in steps 1 and 5. End with:
+```
+DRY RUN — spec written to .orc/tmp/{number}-spec.md, not posted.
+{Open Questions: None. — would set status:ready | still open: {what's open}}
+Re-run without --dry-run to post it.
+```
+
 ## Steps
 
 ### 1. Load the issue
@@ -16,9 +29,14 @@ to live in both `create` and the old feature-planning step now lives here alone.
 Require an issue number (`/orc:plan {number}`). Invoke `issue-loader` with it.
 Use the returned title, body, labels, and any existing spec comment.
 
-Set it to `status:draft` while a spec is being written or revised:
+Set it to `status:draft` while a spec is being written or revised. Create
+both labels defensively first — idempotent, a no-op once `/orc:setup` or a
+prior run has already made them, but `--add-label` 404s on a label that's
+never existed in the repo at all:
 
 ```bash
+gh label create "status:draft" -f >/dev/null 2>&1 || true
+gh label create "status:ready" -f >/dev/null 2>&1 || true
 gh issue edit {number} --remove-label "status:ready" --add-label "status:draft" 2>/dev/null || \
   gh issue edit {number} --add-label "status:draft"
 ```
@@ -61,8 +79,11 @@ gh issue comment {number} --body-file .orc/tmp/{number}-spec.md
 rm .orc/tmp/{number}-spec.md
 ```
 
-- **Open Questions is `None.` and every criterion is verifiable** →
-  `gh issue edit {number} --remove-label status:draft --add-label status:ready`.
+- **Open Questions is `None.` and every criterion is verifiable**:
+  ```bash
+  gh label create "status:ready" -f >/dev/null 2>&1 || true
+  gh issue edit {number} --remove-label status:draft --add-label status:ready
+  ```
 - **Anything still open** → leave `status:draft` and tell the user what remains.
 
 ### 6. Report

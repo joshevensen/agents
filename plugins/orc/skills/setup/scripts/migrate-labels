@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
-# Usage: migrate-labels <owner/repo>
+# Usage: migrate-labels <owner/repo> [--dry-run]
 # Maps known pre-skill labels to managed equivalents and drops known-useless labels.
 # Prints any unrecognized labels to stderr for manual review.
+# --dry-run: print what would change; no gh issue edit calls are made.
 set -euo pipefail
 
 REPO="$1"
+DRY_RUN=""
+[[ "${2-}" == "--dry-run" ]] && DRY_RUN="1"
 
 # source|target  (empty target = drop silently)
 MAPPINGS=(
@@ -91,12 +94,16 @@ while IFS=$'\t' read -r NUM LABEL_CSV; do
   done
 
   if [[ ${#ADD_ARGS[@]} -gt 0 || ${#REMOVE_ARGS[@]} -gt 0 ]]; then
-    gh issue edit "$NUM" --repo "$REPO" "${ADD_ARGS[@]}" "${REMOVE_ARGS[@]}"
+    if [[ -n "$DRY_RUN" ]]; then
+      echo "Would update #$NUM: ${ADD_ARGS[*]-} ${REMOVE_ARGS[*]-}" >&2
+    else
+      gh issue edit "$NUM" --repo "$REPO" "${ADD_ARGS[@]}" "${REMOVE_ARGS[@]}"
+    fi
     UPDATED=$((UPDATED + 1))
   fi
 done < <(echo "$ISSUES_JSON" | jq -r '.[] | [(.number | tostring), (.labels | map(.name) | join(","))] | join("\t")')
 
-echo "Label migration: $UPDATED issues updated" >&2
+echo "Label migration${DRY_RUN:+ (dry run)}: $UPDATED issues ${DRY_RUN:+would be }updated" >&2
 
 if [[ ${#UNKNOWN_LABELS[@]} -gt 0 ]]; then
   echo "" >&2

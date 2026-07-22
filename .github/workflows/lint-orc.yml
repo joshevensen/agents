@@ -1,0 +1,21 @@
+name: Lint orc plugin
+
+on:
+  pull_request:
+    paths:
+      - "plugins/orc/**"
+      - ".github/scripts/lint-orc.py"
+      - ".github/workflows/lint-orc.yml"
+  push:
+    branches: [main]
+    paths:
+      - "plugins/orc/**"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: python3 .github/scripts/lint-orc.py

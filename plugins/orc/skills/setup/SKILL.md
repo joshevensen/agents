@@ -4,11 +4,31 @@ description: Wire a repo for orc — labels, .orc directory, CLAUDE.md verificat
 model: sonnet
 ---
 
-The day-to-day loop (`create`, `plan`, `build`, `push`, `list`) self-provisions
-its own labels and needs no setup to work in a fresh repo. `setup` handles the
-few pieces of idempotent scaffolding that are more reliably done as one command
-than a manual checklist — most importantly the `CLAUDE.md` verification sections
-that make `build` project-agnostic.
+The day-to-day loop (`create`, `plan`, `build`, `resume`, `push`, `list`)
+self-provisions its own labels — each defensively `gh label create`s a bare
+version of any `status:*` label right before it's first needed — and needs no
+setup to work in a fresh repo. That self-provisioning is intentionally minimal
+(no color or description); `setup` still owns the canonical color/description
+for the full managed set, so it's worth running even on a repo where every
+label already exists — it upgrades bare, defensively-created labels to the
+real thing rather than leaving them as whatever GitHub's default looks like.
+`setup` also handles the few pieces of idempotent scaffolding that are more
+reliably done as one command than a manual checklist — most importantly the
+`CLAUDE.md` verification sections that make `build` project-agnostic.
+
+## `--dry-run`
+
+`/orc:setup --dry-run` still writes every local file it would normally write
+— `CLAUDE.md` sections, the PR template, `CHANGELOG.md`, `dependabot.yml`,
+`.orc/` — since previewing exactly those files is the point, and none of it
+is pushed. Pass `--dry-run` through to both label scripts in step 2 (they
+support it directly and print what would change instead of calling `gh
+label`). Skip step 8 entirely — nothing gets committed, pushed, or handed to
+`/orc:push`. End with:
+```
+DRY RUN — files written for review: {list}. Labels: see step 2 output above.
+Nothing committed or pushed. Re-run without --dry-run to commit and open a PR.
+```
 
 ## Steps
 
@@ -24,16 +44,28 @@ gh --version
 gh auth status
 ```
 
-If either fails, stop with instructions (install from https://cli.github.com, or
-run `gh auth login`).
+If either fails, stop with instructions:
+- **Local:** install from https://cli.github.com, or run `gh auth login`.
+- **Claude Code on the web:** `gh` isn't preinstalled and must be added to the
+  environment's **Setup script** — see the web-install section of the orc README.
+  It auto-authenticates via the `GH_TOKEN` web environments already expose, so no
+  `gh auth login` is needed once installed.
 
 ### 2. Labels
 
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/skills/setup/scripts/manage-labels {owner}/{repo}
-${CLAUDE_PLUGIN_ROOT}/skills/setup/scripts/manage-labels {owner}/{repo} --prune
 ${CLAUDE_PLUGIN_ROOT}/skills/setup/scripts/migrate-labels {owner}/{repo}
 ```
+
+Upsert and migrate are safe to run every time — both only ever create, edit,
+or remap, never delete. **Don't run `manage-labels --prune` as part of this
+default flow** — it deletes any label outside the managed set (anything you
+added yourself included; only `blocked:*` and `github-actions` are exempt),
+and doing that unconditionally on every `/orc:setup` run would silently eat a
+custom label the moment someone adds one. If the user explicitly asks to
+clean up unmanaged labels, run `--prune` then, as its own deliberate step —
+never bundle it into a routine setup run.
 
 If migration reports unrecognized labels, reason about intent and apply
 `gh issue edit` manually.
@@ -88,6 +120,26 @@ touching existing content.
 
 `build` gates on `## Verification` (or `## Focused Verification`) being present;
 without them it gates immediately on every issue.
+
+**If `CLAUDE.md` already has a `## CI-Only Verification` section, skip this
+entirely** — same rule as the two sections above, never re-propose or touch
+something already there. Otherwise, while scanning, also check for heavy/slow
+suites — `playwright.config.*`, `cypress.config.*`, or script names containing
+`e2e`/`playwright`/`cypress`/`browser`. If found, propose a third, optional
+section (same show/confirm flow; skip silently if declined or nothing heavy is
+found — `build` doesn't gate on this one):
+```
+## CI-Only Verification
+Suites listed here are never run by `build`, not even scoped — CI is the
+only place they execute:
+  - Playwright end-to-end tests (`npm run test:e2e`) — slow, browser-driven
+```
+Note in the final report (step 9) that repos pushing per-wave commits to a
+draft PR (see `build` step 5) may want their CI workflow to skip these heavy
+jobs while the PR is draft (`if: github.event.pull_request.draft == false`)
+— but don't edit the repo's CI workflow files to add this; that's much more
+invasive than a `CLAUDE.md` section and varies too much by provider to do
+safely from here.
 
 ### 5. PR template
 

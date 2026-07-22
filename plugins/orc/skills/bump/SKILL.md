@@ -4,6 +4,18 @@ description: Review open Dependabot grouped PRs for security and breaking change
 model: sonnet
 ---
 
+## `--dry-run`
+
+`/orc:bump --dry-run` runs steps 1-5 exactly as normal — repo/PR discovery,
+the OSV/npm/major-version checks, and the parallel review agents are all
+read-only already. Only step 6 mutates: skip `gh pr merge`, and in CI fix
+mode skip the commit/push (still invoke `ci-debugger` and show its diagnosis,
+just don't apply it). For each PR, report what step 6 would have done instead
+of doing it:
+```
+DRY RUN — PR #{pr}: {would merge | CI failing, would attempt ci-debugger fix | flagged, awaiting (m)/(s)/(d)}
+```
+
 ## Steps
 
 ### 1. Identify the repo
@@ -44,7 +56,13 @@ gh pr diff {pr} --repo {owner}/{repo}
 
 Parse all changed package entries from the diff — look for version bumps in `package.json`, `composer.json`, `package-lock.json`, `composer.lock`, or equivalent.
 
-For each package, extract `{package}`, `{old_version}`, `{new_version}`, and `{ecosystem}` (npm, packagist, github-actions, etc.).
+For each package, extract `{package}`, `{old_version}`, `{new_version}`, and its ecosystem, mapped to the **OSV ecosystem name** (case- and spelling-exact — OSV silently returns zero results for any other string):
+
+| Manifest | OSV ecosystem |
+|---|---|
+| `package.json` / `package-lock.json` | `npm` |
+| `composer.json` / `composer.lock` | `Packagist` |
+| GitHub Actions workflow files | `GitHub Actions` |
 
 #### OSV vulnerability check
 
@@ -52,15 +70,18 @@ For each package:
 ```bash
 curl -sf https://api.osv.dev/v1/query \
   -H "Content-Type: application/json" \
-  -d '{"package": {"name": "{package}", "ecosystem": "{ecosystem}"}, "version": "{new_version}"}'
+  -d '{"package": {"name": "{package}", "ecosystem": "{osv_ecosystem}"}, "version": "{new_version}"}'
 ```
 
 Flag any package where the response contains `vulns`.
 
 #### Publish recency (npm only)
 
+The per-version endpoint (`/{package}/{version}`) has no timestamp field — the
+publish time only exists on the root package document, keyed by version:
+
 ```bash
-curl -sf "https://registry.npmjs.org/{package}/{new_version}" | jq -r '.publish_time // empty'
+curl -sf "https://registry.npmjs.org/{package}" | jq -r --arg v "{new_version}" '.time[$v] // empty'
 ```
 
 Flag any package published less than 48 hours ago as a suspicious publish.
@@ -107,13 +128,24 @@ WARNINGS
 
 ---
 
-### 6. CI check and merge
+### 6. CI check, mergeability, and merge
 
 ```bash
 gh pr checks {pr} --repo {owner}/{repo} --watch --timeout 600
 ```
 
-If CI passes: merge:
+If CI passes, check mergeability before merging — CI green doesn't mean
+conflict-free:
+```bash
+gh pr view {pr} --repo {owner}/{repo} --json mergeable --jq .mergeable
+```
+If `CONFLICTING`: Dependabot usually re-resolves this itself on the next run,
+so report it and move to the next PR rather than resolving it here:
+```
+PR #{pr} — {title}: has merge conflicts with {base branch}. Dependabot will
+usually re-open this with a rebased diff; skipping for now.
+```
+If mergeable, merge:
 ```bash
 gh pr merge {pr} --repo {owner}/{repo} --squash --delete-branch
 ```
