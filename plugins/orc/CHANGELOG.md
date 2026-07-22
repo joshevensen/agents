@@ -2,6 +2,16 @@
 
 Tracks the `orc` plugin's `version` in `.claude-plugin/plugin.json`. Bump that field with every change you want installed copies to receive — Claude Code caches plugins by version, so pushing commits alone does not update anyone already on a pinned version. Follow [semver](https://semver.org): MAJOR for breaking changes, MINOR for new features, PATCH for fixes.
 
+## [0.3.0]
+
+### Added
+- `/orc:resume` — continues a `build` that stopped after its PR was already open (an infra flake or a fix already applied at the CI/mergeability tail), re-running only that tail instead of rebuilding from scratch. `build`'s gate procedure now recommends `resume` or `build` depending on whether a PR already exists
+- `--dry-run` on every GitHub-writing skill (`create`, `plan`, `build`, `push`, `bump`, `resume`, `setup`): local git commits and local file writes still happen for inspection, but `git push` and every GitHub-mutating `gh` call are skipped and printed instead. `manage-labels`/`migrate-labels` support it natively
+- A structural CI lint (`.github/workflows/lint-orc.yml`) over the orc plugin: frontmatter validity and model names, `${CLAUDE_PLUGIN_ROOT}` paths resolve, every `Invoke`d agent is defined, and `plugin.json`'s version was bumped whenever `plugins/orc/**` changed
+
+### Fixed
+- `bump` had no mergeability check before merging — unlike `build`/`push`, which both check and handle `CONFLICTING`. It now checks first and skips (rather than force-merging into) a conflicting PR, reporting it for the next Dependabot run to resolve
+
 ## [0.2.1]
 
 ### Changed

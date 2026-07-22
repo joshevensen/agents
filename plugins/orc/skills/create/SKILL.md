@@ -11,6 +11,22 @@ codebase for implementation detail — that is `plan`'s job. Its one hard rule:
 **it never ends with an unresolved open question.** Ask freely while discussing,
 but every issue it creates reads `Open Questions: None.`
 
+## `--dry-run`
+
+`/orc:create --dry-run` runs the full discussion and open-question resolution
+normally — nothing there touches GitHub anyway. At step 4, skip the label
+self-provisioning and `gh issue create` calls; instead show each issue exactly
+as it would be filed (title, body, labels) and stop:
+```
+DRY RUN — would create {n} issue(s):
+
+  {title} [labels: {labels}]
+  {body}
+  ...
+
+Re-run without --dry-run to file them.
+```
+
 ## Steps
 
 ### 1. Discuss

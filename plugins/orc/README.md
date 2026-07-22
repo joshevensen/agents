@@ -50,6 +50,7 @@ Requires the environment's network access to reach `github.com` **and `cli.githu
 | `/orc:create` | Discuss an idea at the scope level and produce GitHub issue(s) — no spec |
 | `/orc:plan` | Research the codebase and write a build-ready spec onto an issue |
 | `/orc:build` | Take a specced issue to an open PR: task list → parallel build → focused verify → review → PR. Never merges |
+| `/orc:resume` | Continue a blocked build whose PR is already open — re-runs only CI/mergeability, no rebuild |
 | `/orc:push` | Commit working-tree changes → review → push → open PR (no merge) |
 | `/orc:list` | List open issues, optionally filtered by status |
 | `/orc:bump` | Review and merge Dependabot grouped PRs when safe |
@@ -91,8 +92,13 @@ command — the command itself is necessarily per-repo/per-language.
 
 `build` runs unattended and never guesses. At any decision point it can't safely
 pass, it **gates**: commits and pushes its branch for inspection, comments the
-reason on the issue, sets `status:blocked`, and stops. Fix the cause and re-run —
-`build` resets to `origin/main` and rebuilds from scratch.
+reason on the issue, sets `status:blocked`, and stops. Fix the cause and
+resume: if the gate's PR already exists, `/orc:resume {number}` picks up from
+there — only CI/mergeability re-run, nothing is rebuilt. If no PR exists yet
+(a gate earlier than step 12 — spec, confidence, ambiguity, missing infra, a
+mid-build review or verification failure), `/orc:build {number}` resets to
+`origin/main` and rebuilds from scratch; there's no saved implementation state
+to resume into at that point.
 
 | Gate | Trips when |
 |---|---|
@@ -104,6 +110,16 @@ reason on the issue, sets `status:blocked`, and stops. Fix the cause and re-run 
 | Missing infra | `CLAUDE.md` has no `## Verification` / `## Focused Verification` section |
 
 There is **no scope gate** — issue size never stops a build.
+
+## `--dry-run`
+
+Every skill that writes to GitHub or pushes (`create`, `plan`, `build`,
+`push`, `bump`, `resume`, `setup`) accepts a trailing `--dry-run`. Local
+git commits and local file writes still happen — so you can inspect real
+output with `git log`/`git diff` — but `git push` and every GitHub-mutating
+`gh` call (issue/PR/label create, edit, comment, merge) are skipped and
+printed instead. Each skill documents its exact boundary at the top of its
+`SKILL.md`.
 
 ## Labels
 

@@ -6,6 +6,20 @@ model: sonnet
 
 `push` is the quick, local sibling of `build`: for changes you made by hand rather than through a spec — seeing the code directly, not going through `create`/`plan`/`build`. It always runs the AI review before anything reaches a PR — that's non-negotiable, since review is what catches bugs headed for `main`, spec or no spec. It never merges.
 
+## `--dry-run`
+
+`/orc:push --dry-run` runs the size check, commits locally (step 5), and runs
+the full AI review (step 6) exactly as normal — real commits on a real local
+branch, inspectable with `git log` / `git diff origin/main...HEAD`. It skips
+`git push` in step 5 and every step afterward that needs a pushed branch: no
+`git push` after review fixes, no `gh pr create` in step 7 (print the title
+and body it would have used instead), and step 8 (CI, mergeability) has
+nothing real to check without a pushed PR, so skip it and say so. End with:
+```
+DRY RUN — {n} commit(s) on local branch {branch}, not pushed. Would open PR:
+"{message}" against main. Re-run without --dry-run to push and open it.
+```
+
 ## Steps
 
 ### 1. Preflight

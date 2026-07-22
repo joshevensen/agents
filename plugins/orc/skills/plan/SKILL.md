@@ -9,6 +9,19 @@ produced, researches the codebase, decides how to implement it, and writes the
 spec as a comment on the issue. It owns all spec-writing — the logic that used
 to live in both `create` and the old feature-planning step now lives here alone.
 
+## `--dry-run`
+
+`/orc:plan {number} --dry-run` runs research, spec-writing, and open-question
+resolution exactly as normal — `spec-writer` only writes to the local
+`.orc/tmp/{number}-spec.md` scratch file, which is safe to leave in place for
+inspection (skip the `rm` in step 5 too, so you can read it after). Skip every
+`gh issue edit`/`gh issue comment` call in steps 1 and 5. End with:
+```
+DRY RUN — spec written to .orc/tmp/{number}-spec.md, not posted.
+{Open Questions: None. — would set status:ready | still open: {what's open}}
+Re-run without --dry-run to post it.
+```
+
 ## Steps
 
 ### 1. Load the issue

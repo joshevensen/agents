@@ -14,13 +14,45 @@ commits and pushes whatever exists, comments on the issue explaining why, sets
 Everything project-specific — how to verify — comes from the repo's `CLAUDE.md`.
 This skill hardcodes nothing about any one project.
 
+## `--dry-run`
+
+`/orc:build {number} --dry-run` runs everything through implementation,
+verification, and review exactly as normal, including local git — the branch
+is created and every wave's work is committed locally, so `git log` / `git diff
+origin/main...HEAD` show real, inspectable output. It stops being "real" at the
+network boundary: skip the `gh issue edit` label changes in steps 5 and 13,
+skip `git push` in step 9, and skip step 12's `gh pr create` entirely — print
+the title, body, and labels it would have used instead of creating anything.
+Steps 13-14 (CI watch, mergeability, the label flip) need a real PR to check
+against, so there's nothing genuine to run there; report what's left to verify
+once the branch is actually pushed. End with:
+```
+DRY RUN — {n} commit(s) on local branch {branch}, not pushed. Would open PR:
+"{title}" against main. Re-run without --dry-run to push and open it.
+```
+Gates still trip on real problems (spec, confidence, ambiguity, focused
+verification, review blockers) — dry-run previews the push/PR boundary, it
+doesn't skip validation.
+
 ## Gate procedure
 
 Referenced throughout as "**gate: {name}**". When a gate trips:
 
 1. Commit and push whatever exists on the branch (so it's inspectable) — unless
    nothing was built yet.
-2. Comment on the issue:
+2. Comment on the issue. The recovery command depends on whether a PR was
+   already opened (step 12) — if so, everything through review is done and
+   only the CI/mergeability tail failed, so `/orc:resume` picks up from there
+   instead of redoing the whole build:
+   ```
+   🚧 Build paused: {gate name}
+
+   {specific reason}
+
+   What's needed: {the concrete fix}
+   Resume: fix the above, then re-run `/orc:resume {number}` (continues from the open PR).
+   ```
+   or, if no PR exists yet:
    ```
    🚧 Build paused: {gate name}
 
@@ -48,7 +80,10 @@ Invoke `issue-loader` with `{number}`. Use the returned title, slug, labels,
 status, body, and spec comment.
 
 Expect `status:ready`. If `status:blocked` or `status:building` from a prior
-run, continue (this run resets the branch). If `status:draft`: **gate: spec**
+run, continue (this run resets the branch) — but if a PR already exists for
+this issue, `/orc:resume {number}` is almost always what's wanted instead: it
+continues from the open PR rather than redoing the whole build. If
+`status:draft`: **gate: spec**
 (no spec yet — run `/orc:plan {number}`).
 
 ### 2. Gate: spec

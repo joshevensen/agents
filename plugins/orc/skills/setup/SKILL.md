@@ -10,6 +10,20 @@ few pieces of idempotent scaffolding that are more reliably done as one command
 than a manual checklist — most importantly the `CLAUDE.md` verification sections
 that make `build` project-agnostic.
 
+## `--dry-run`
+
+`/orc:setup --dry-run` still writes every local file it would normally write
+— `CLAUDE.md` sections, the PR template, `CHANGELOG.md`, `dependabot.yml`,
+`.orc/` — since previewing exactly those files is the point, and none of it
+is pushed. Pass `--dry-run` through to both label scripts in step 2 (they
+support it directly and print what would change instead of calling `gh
+label`). Skip step 8 entirely — nothing gets committed, pushed, or handed to
+`/orc:push`. End with:
+```
+DRY RUN — files written for review: {list}. Labels: see step 2 output above.
+Nothing committed or pushed. Re-run without --dry-run to commit and open a PR.
+```
+
 ## Steps
 
 ### 0. Resolve `{owner}/{repo}`

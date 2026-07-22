@@ -1,7 +1,7 @@
 {
   "name": "orc",
   "description": "Issue-to-PR automation for GitHub-issue-driven work: discuss and spec issues interactively, then build them autonomously with parallel subagents, focused verification, and a folded-in AI review — interactive merge.",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "author": {
     "name": "Josh Evensen"
   }

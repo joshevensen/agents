@@ -4,6 +4,18 @@ description: Review open Dependabot grouped PRs for security and breaking change
 model: sonnet
 ---
 
+## `--dry-run`
+
+`/orc:bump --dry-run` runs steps 1-5 exactly as normal — repo/PR discovery,
+the OSV/npm/major-version checks, and the parallel review agents are all
+read-only already. Only step 6 mutates: skip `gh pr merge`, and in CI fix
+mode skip the commit/push (still invoke `ci-debugger` and show its diagnosis,
+just don't apply it). For each PR, report what step 6 would have done instead
+of doing it:
+```
+DRY RUN — PR #{pr}: {would merge | CI failing, would attempt ci-debugger fix | flagged, awaiting (m)/(s)/(d)}
+```
+
 ## Steps
 
 ### 1. Identify the repo
@@ -116,13 +128,24 @@ WARNINGS
 
 ---
 
-### 6. CI check and merge
+### 6. CI check, mergeability, and merge
 
 ```bash
 gh pr checks {pr} --repo {owner}/{repo} --watch --timeout 600
 ```
 
-If CI passes: merge:
+If CI passes, check mergeability before merging — CI green doesn't mean
+conflict-free:
+```bash
+gh pr view {pr} --repo {owner}/{repo} --json mergeable --jq .mergeable
+```
+If `CONFLICTING`: Dependabot usually re-resolves this itself on the next run,
+so report it and move to the next PR rather than resolving it here:
+```
+PR #{pr} — {title}: has merge conflicts with {base branch}. Dependabot will
+usually re-open this with a rebased diff; skipping for now.
+```
+If mergeable, merge:
 ```bash
 gh pr merge {pr} --repo {owner}/{repo} --squash --delete-branch
 ```

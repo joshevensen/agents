@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
-# Usage: manage-labels <owner/repo> [--prune]
+# Usage: manage-labels <owner/repo> [--prune] [--dry-run]
 # Default: upsert all managed labels (create if missing, update if present).
 # --prune: also delete any labels not in the managed set,
 #   excluding dynamic labels (blocked:*) and Dependabot-managed labels.
+# --dry-run: print what would change; no gh label calls are made.
 set -euo pipefail
 
 REPO="$1"
 MODE="upsert"
-[[ "${2-}" == "--prune" ]] && MODE="prune"
+DRY_RUN=""
+for arg in "${@:2}"; do
+  [[ "$arg" == "--prune" ]] && MODE="prune"
+  [[ "$arg" == "--dry-run" ]] && DRY_RUN="1"
+done
 
 # name|color|description
 MANAGED_LABELS=(
@@ -36,12 +41,20 @@ if [[ "$MODE" == "upsert" ]]; then
   for entry in "${MANAGED_LABELS[@]}"; do
     IFS='|' read -r name color desc <<< "$entry"
     if echo "$EXISTING" | grep -Fxq "$name"; then
-      gh label edit "$name" --repo "$REPO" --color "$color" --description "$desc"
+      if [[ -n "$DRY_RUN" ]]; then
+        echo "Would edit: $name (color=$color, description=\"$desc\")" >&2
+      else
+        gh label edit "$name" --repo "$REPO" --color "$color" --description "$desc"
+      fi
     else
-      gh label create "$name" --repo "$REPO" --color "$color" --description "$desc"
+      if [[ -n "$DRY_RUN" ]]; then
+        echo "Would create: $name (color=$color, description=\"$desc\")" >&2
+      else
+        gh label create "$name" --repo "$REPO" --color "$color" --description "$desc"
+      fi
     fi
   done
-  echo "Managed labels upserted for $REPO" >&2
+  echo "Managed labels ${DRY_RUN:+(dry run) }upserted for $REPO" >&2
 
 elif [[ "$MODE" == "prune" ]]; then
   MANAGED_NAMES=()
@@ -67,8 +80,12 @@ elif [[ "$MODE" == "prune" ]]; then
       [[ "$m" == "$label" ]] && found=1 && break
     done
     if [[ "$found" -eq 0 ]]; then
-      gh label delete "$label" --repo "$REPO" --yes
-      echo "Deleted: $label" >&2
+      if [[ -n "$DRY_RUN" ]]; then
+        echo "Would delete: $label" >&2
+      else
+        gh label delete "$label" --repo "$REPO" --yes
+        echo "Deleted: $label" >&2
+      fi
     fi
   done <<< "$EXISTING"
 fi
