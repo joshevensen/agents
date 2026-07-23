@@ -1,26 +1,26 @@
 ---
 name: respond
-description: Fetch a PR's unresolved review threads and unanswered comments and work through them one at a time — fix and push, or reply. Manually triggered, never watches or subscribes to a PR. Never merges. Invoke as /orc:respond [pr].
+description: Fetch unresolved comments you left on a PR and implement what they ask for directly — no interactive per-item confirmation. Manually triggered, never watches or subscribes to a PR. Never merges. Invoke as /orc:respond [pr].
 model: sonnet
 ---
 
 `respond` is the manual counterpart to watching a PR live: nothing subscribes
-to webhooks or polls in the background. You run `/orc:respond` when you've
-looked at a PR yourself and decided there's feedback worth acting on. It pulls
-whatever is currently unresolved, works through it interactively, pushes any
-fixes, and stops — no CI check, no mergeability check, no merge. Use `resume`
-for CI/mergeability once comments are settled, and merge the PR yourself.
+to webhooks or polls in the background. You run `/orc:respond` after leaving
+comments on your own PR yourself — each one is treated as an instruction to
+carry out, not a suggestion to weigh. It implements every unresolved comment
+directly, commits, pushes, and stops — no CI check, no mergeability check, no
+merge. Use `resume` for CI/mergeability once the comments are settled, and
+merge the PR yourself.
 
 ## `--dry-run`
 
 `/orc:respond [pr] --dry-run` runs steps 0-2 exactly as normal (read-only).
-In step 3, still show each item and let you choose `(f)`/`(r)`/`(s)`; for
-`(f)` show the diff and commit it locally (inspectable with `git log`/`git
-diff`) but skip `git push`; for `(r)` print the reply text instead of posting
-it and skip the resolve mutation. End with:
+Step 3 still implements every item and commits locally (inspectable with
+`git log`/`git diff`), but skips `git push`, the reply posts, and the resolve
+mutations — print what each reply would have said instead. End with:
 ```
-DRY RUN — {n} item(s) addressed locally, not pushed or posted. Re-run without
---dry-run to push fixes and post replies.
+DRY RUN — {n} item(s) implemented locally, not pushed or posted. Re-run
+without --dry-run to push and post replies.
 ```
 
 ## Steps
@@ -43,7 +43,7 @@ gh pr checkout {pr}
 git fetch origin main
 ```
 
-### 2. Gather unaddressed feedback
+### 2. Gather unresolved comments
 
 **Unresolved review threads** (inline comments left via a "Files changed" review):
 
@@ -76,36 +76,34 @@ me=$(gh api user --jq .login)
 gh pr view {pr} --json comments --jq '.comments'
 ```
 
-Walk the comment list in order. A comment counts as unaddressed only if it
-was **not** authored by `{me}` and **no comment authored by `{me}` appears
-later in the list** — that later comment is treated as your reply, even if
-informal. This is a simple heuristic, not thread-aware; if it misclassifies
-something, the reply step still lets you skip it.
+Walk the comment list in order. A comment counts as unanswered only if it was
+**not** authored by `{me}` and **no comment authored by `{me}` appears later
+in the list** — that later comment is treated as your own past reply, even if
+informal.
 
 If both sources are empty, report `Nothing unresolved on PR #{pr}.` and stop.
 
-### 3. Work through each item
+### 3. Implement every item
 
-Present every unresolved thread and unanswered comment, numbered, with its
-file/line (threads) or author (general comments) and body. For each, in
-order:
+Treat each unresolved thread and unanswered comment as a direct instruction —
+no per-item confirmation. For each, in order:
 
-**`(f)` — Fix:** make the code change, show the diff, confirm, then commit:
-```bash
-git commit -am "fix: {brief description of the comment}"
-```
+- **A request for a code change** ("do X", "this should Y", "fix Z"):
+  implement it, then commit:
+  ```bash
+  git commit -am "address review: {brief description of the comment}"
+  ```
+- **A genuine question** (nothing to change, an answer is what's being
+  asked for): reply directly, no code change:
+  - General comment: `gh pr comment {pr} --body "{reply}"`
+  - Review thread: reply in-thread via GraphQL
+    `addPullRequestReviewThreadReply` with the thread `id` and `{reply}` body.
+- **Genuinely ambiguous** (conflicting with another comment, or unclear what
+  change is wanted): don't guess — reply asking for clarification the same
+  way as a question, and leave the thread unresolved.
 
-**`(r)` — Reply:** draft a short reply explaining the decision (why not
-fixed, or a clarifying question), confirm the text, then post it:
-- General comment: `gh pr comment {pr} --body "{reply}"`
-- Review thread: reply in-thread via GraphQL `addPullRequestReviewThreadReply`
-  with the thread `id` and `{reply}` body.
-
-**`(s)` — Skip:** leave it exactly as is, no reply, no resolve. Use this for
-anything ambiguous enough that you'd rather handle it yourself outside this
-skill.
-
-After a fix or a reply to a **review thread**, resolve it:
+After implementing or answering a **review thread**, resolve it (skip this
+for a thread left open pending clarification):
 ```bash
 gh api graphql -f query='
   mutation($id:ID!) { resolveReviewThread(input:{threadId:$id}) { thread { id } } }
@@ -123,6 +121,6 @@ git push
 ### 5. Report
 
 ```
-PR #{pr}: {n} fixed and pushed, {m} replied, {k} skipped.
-Comments settled. Run /orc:resume {issue-number} for CI/mergeability, or merge yourself when ready.
+PR #{pr}: {n} implemented and pushed, {m} answered, {k} left open for clarification.
+Run /orc:resume {issue-number} for CI/mergeability, or merge yourself when ready.
 ```

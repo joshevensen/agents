@@ -5,7 +5,7 @@ Tracks the `orc` plugin's `version` in `.claude-plugin/plugin.json`. Bump that f
 ## [0.5.0]
 
 ### Added
-- `/orc:respond` — manually fetch a PR's unresolved review threads and unanswered general comments, then work through each one interactively (`(f)` fix and commit, `(r)` reply, `(s)` skip), pushing fixes and resolving threads as they're settled. No subscription or background watching — it only acts when you run it, and it never touches CI, mergeability, or merge
+- `/orc:respond` — manually fetch unresolved review threads and unanswered general comments you left on your own PR, and implement each one directly (code change + commit, or a reply for genuine questions) with no per-item confirmation, pushing fixes and resolving threads as they're settled. No subscription or background watching — it only acts when you run it, and it never touches CI, mergeability, or merge
 
 ## [0.4.0]
 
