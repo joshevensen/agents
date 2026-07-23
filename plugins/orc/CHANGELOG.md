@@ -2,6 +2,11 @@
 
 Tracks the `orc` plugin's `version` in `.claude-plugin/plugin.json`. Bump that field with every change you want installed copies to receive — Claude Code caches plugins by version, so pushing commits alone does not update anyone already on a pinned version. Follow [semver](https://semver.org): MAJOR for breaking changes, MINOR for new features, PATCH for fixes.
 
+## [0.5.0]
+
+### Added
+- `/orc:respond` — manually fetch a PR's unresolved review threads and unanswered general comments, then work through each one interactively (`(f)` fix and commit, `(r)` reply, `(s)` skip), pushing fixes and resolving threads as they're settled. No subscription or background watching — it only acts when you run it, and it never touches CI, mergeability, or merge
+
 ## [0.4.0]
 
 ### Added
