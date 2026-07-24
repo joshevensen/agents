@@ -52,6 +52,7 @@ Requires the environment's network access to reach `github.com` **and `cli.githu
 | `/orc:build` | Take a specced issue to an open PR: draft PR on branch, task list → parallel build with live per-wave commits → focused verify → mark ready for review → AI review → merge readiness. Never merges |
 | `/orc:resume` | Continue a blocked build whose PR already reached ready-for-review — re-checks review freshness, then CI/mergeability, no rebuild |
 | `/orc:push` | Commit working-tree changes → review → push → open PR (no merge) |
+| `/orc:respond` | Manually fetch unresolved comments you left on your own PR and implement each one directly — no per-item confirmation (no subscription, no merge) |
 | `/orc:list` | List open issues, optionally filtered by status |
 | `/orc:bump` | Review and merge Dependabot grouped PRs when safe |
 | `/orc:discuss` | Read-only exploration mode — no changes until you say go |
